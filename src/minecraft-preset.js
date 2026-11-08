@@ -100,7 +100,8 @@ function createMinecraftPreset() {
     cat("🔒 LEITUNG & LOGS", [
       ch("📊・server-logs", "Interne Serverprotokolle", ["Owner", "Management", "Administrator"]),
       ch("⚙️・verwaltung", "Serververwaltung und Entscheidungen", ["Owner", "Management"]),
-      ch("🤖・bot-logs", "Bot-Aktionen und technische Meldungen", ["Owner", "Management", "Administrator"])
+      ch("🤖・bot-logs", "Bot-Aktionen und technische Meldungen", ["Owner", "Management", "Administrator"]),
+      ch("📜・regel-logs", "Protokoll aller Regelbestätigungen mit Discord-Name, ID und Zeitpunkt", ["Owner", "Management", "Administrator"])
     ])
   ];
 
