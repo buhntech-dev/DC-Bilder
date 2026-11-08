@@ -27,7 +27,9 @@ function createMinecraftPreset() {
       ch("📜・regeln", "Bitte lies die Regeln vor dem Spielen"),
       ch("📢・ankündigungen", "Offizielle News und Updates"),
       ch("🔗・server-beitritt", "IP-Adresse, Version und Beitrittsanleitung"),
-      ch("🎭・rollen", "Wähle deine Benachrichtigungs- und Spielrollen")
+      ch("🎭・rollen", "Wähle deine Benachrichtigungs- und Spielrollen"),
+      ch("📝・bewerbungen", "Hier kannst du dich für das Serverteam bewerben"),
+      ch("🛡️・whitelist", "Hier findest du Informationen und kannst eine Whitelist-Bewerbung einreichen")
     ]),
     cat("🌍 SERVER INFORMATIONEN", [
       ch("📡・server-status", "Status und Erreichbarkeit des Minecraft-Servers"),
