@@ -84,6 +84,24 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
+  if (interaction.isButton() && interaction.customId === "minecraft_verify_member") {
+    try {
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      const memberRole = interaction.guild.roles.cache.find(role => role.name === "Mitglied");
+      if (!memberRole) {
+        return interaction.reply({ content: "Die Rolle **Mitglied** wurde nicht gefunden. Bitte informiere das Serverteam.", ephemeral: true });
+      }
+      if (member.roles.cache.has(memberRole.id)) {
+        return interaction.reply({ content: "Du bist bereits bestätigt. Viel Spaß auf dem Server!", ephemeral: true });
+      }
+      await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
+      return interaction.reply({ content: "✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!", ephemeral: true });
+    } catch (error) {
+      console.error("Fehler bei Minecraft-Verifizierung:", error);
+      return interaction.reply({ content: "Die Bestätigung ist fehlgeschlagen. Bitte prüfe, ob der Bot **Rollen verwalten** besitzt und seine Bot-Rolle über der Rolle **Mitglied** steht.", ephemeral: true });
+    }
+  }
+
   if (interaction.isButton()) {
     const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
