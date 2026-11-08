@@ -136,6 +136,27 @@ async function applyServerPlan(guild, plan, options = {}) {
       const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
 
+      if (/regeln/.test(channelName) && type === ChannelType.GuildText) {
+        const rulesEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle("📜 Community-Regeln")
+          .setDescription([
+            "**1. Respektvoller Umgang** – Behandle alle Mitglieder freundlich. Beleidigungen, Mobbing und Diskriminierung sind verboten.",
+            "**2. Kein Spam** – Vermeide Spam, Capslock, Flooding und unerwünschte Werbung.",
+            "**3. Keine Werbung ohne Erlaubnis** – Fremde Server, Shops und Einladungslinks nur mit Zustimmung der Leitung.",
+            "**4. Datenschutz** – Veröffentliche keine privaten Daten, Nachrichten oder Bilder anderer Personen ohne deren Einwilligung.",
+            "**5. Faire Spielweise** – Cheats, Hacks, Exploits und absichtliches Ausnutzen von Fehlern sind verboten.",
+            "**6. Keine Täuschung** – Gib dich nicht als Teammitglied aus und missbrauche keine Rechte oder Namen.",
+            "**7. Passende Inhalte** – Keine beleidigenden, extremistischen, pornografischen oder anderweitig unzulässigen Inhalte.",
+            "**8. Support respektieren** – Kein unnötiges Pingen. Folge den Anweisungen des Support-Teams und nutze Tickets.",
+            "**9. Sprachkanäle** – Kein Schreien, Soundboard-Spam oder absichtliches Stören anderer Gespräche.",
+            "**10. Teamentscheidungen** – Moderationsentscheidungen sind zu respektieren. Beschwerden bitte sachlich per Ticket einreichen.",
+            "",
+            "Mit der Bestätigung in **#bestätigung** erklärst du, dass du diese Regeln gelesen hast und akzeptierst. Verstöße können Verwarnungen, Timeouts, Kicks oder Banns zur Folge haben."
+          ].join("\\n"))
+          .setFooter({ text: "Minecraft Community • Bitte halte dich an die Regeln" });
+        await createdChannel.send({ embeds: [rulesEmbed] });
+      }
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
           .setColor(0x2ECC71)
