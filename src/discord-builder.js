@@ -105,7 +105,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const options = {
         name: channelName, type, parent: parent.id,
-        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles),
+        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) options.topic = String(channel.topic).slice(0, 1024);
@@ -165,14 +165,14 @@ function rolePermissions(name) {
   return [];
 }
 
-function buildChannelOverwrites(guild, names, roleMap) {
+function buildChannelOverwrites(guild, names, roleMap, ownerId) {
   const matchedRoles = [...new Set((names || [])
     .map(name => roleMap.get(String(name).toLowerCase()))
     .filter(Boolean))];
-  if (!matchedRoles.length) return [];
-  return [
-    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-    ...matchedRoles.map(role => ({
+  const overwrites = [];
+  if (matchedRoles.length) {
+    overwrites.push({ id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] });
+    overwrites.push(...matchedRoles.map(role => ({
       id: role.id,
       allow: [
         PermissionFlagsBits.ViewChannel,
@@ -181,8 +181,23 @@ function buildChannelOverwrites(guild, names, roleMap) {
         PermissionFlagsBits.Connect,
         PermissionFlagsBits.Speak
       ]
-    }))
-  ];
+    })));
+  }
+  // Der konfigurierte Owner bekommt auf jedem neu erstellten Kanal explizit Zugriff,
+  // auch wenn der Kanal eigentlich nur für Teamrollen vorgesehen ist.
+  if (ownerId) {
+    overwrites.push({
+      id: ownerId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak
+      ]
+    });
+  }
+  return overwrites;
 }
 
 module.exports = { applyServerPlan };
