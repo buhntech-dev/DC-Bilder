@@ -44,6 +44,7 @@ const commands = [
   new SlashCommandBuilder().setName("slowmode").setDescription("Setzt den Nachrichten-Abstand")
     .addIntegerOption(o => o.setName("sekunden").setDescription("0 bis 21600 Sekunden").setMinValue(0).setMaxValue(21600).setRequired(true)),
   new SlashCommandBuilder().setName("serverinfo").setDescription("Zeigt Informationen über den Server"),
+  new SlashCommandBuilder().setName("server-leeren").setDescription("Löscht Serverkanäle und Rollen – Bot-Befehle bleiben erhalten"),
 ] .map(command => command.toJSON());
 
 async function main() {
