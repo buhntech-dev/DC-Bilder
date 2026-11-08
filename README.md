@@ -35,6 +35,7 @@ Für Railway:
 
 ## 4. Befehle
 - `/plan prompt: ...` zeigt den geplanten Serveraufbau, ohne etwas zu ändern.
+- `/minecraft` lädt ein hochwertiges, fest gespeichertes Minecraft-Serverlayout mit Rollen, Kategorien, Text- und Sprachkanälen. Kein Prompt und keine KI-API nötig.
 - `/build prompt: ...` zeigt einen Plan. Erst nach Klick auf **Server jetzt erstellen** wird er angelegt.
 
 Beispiel:
