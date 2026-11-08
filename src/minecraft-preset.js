@@ -60,11 +60,13 @@ function createMinecraftPreset() {
       ch("❓・häufige-fragen", "Antworten auf häufige Fragen"),
       ch("🐞・bug-melden", "Fehler und Probleme melden"),
       ch("🚨・spieler-melden", "Regelverstöße melden – bitte sachlich"),
-      ch("📩・support-team", "Interner Supportbereich", ["Supporter", "Moderator", "Administrator"]),
+      ch("📩・support-team", "Interner Supportbereich", ["Supporter", "Moderator", "Administrator"])
+    ]),
+    cat("🔊 SUPPORT-SPRACHRÄUME", [
       ch("🔊・Support-Warteraum", "Wartebereich für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
-      ch("🔊・Support-Raum 1", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
-      ch("🔊・Support-Raum 2", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
-      ch("🔊・Support-Raum 3", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
+      ...Array.from({ length: 10 }, (_, index) =>
+        ch("🔊・Support-Raum-" + String(index + 1).padStart(2, "0"), "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
+      )
     ]),
     cat("🔊 SPRACHKANÄLE", [
       ch("🔊・Community 1", "Offener Sprachkanal", [], "voice"),
