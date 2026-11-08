@@ -153,6 +153,29 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
+  if (interaction.isButton() && (interaction.customId === "admin_duty_on" || interaction.customId === "admin_duty_off")) {
+    try {
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      const authorized = member.permissions.has(PermissionFlagsBits.Administrator) || ["Owner", "Management", "Administrator"].some(name => member.roles.cache.some(role => role.name === name));
+      if (!authorized) return interaction.reply({ content: "Nur Owner, Management und Administratoren können ihren Dienststatus ändern.", ephemeral: true });
+      const onRole = interaction.guild.roles.cache.find(role => role.name === "Admin im Dienst");
+      const offRole = interaction.guild.roles.cache.find(role => role.name === "Admin außer Dienst");
+      if (!onRole || !offRole) return interaction.reply({ content: "Dienstrollen fehlen. Bitte /minecraft erneut aufbauen.", ephemeral: true });
+      if (interaction.customId === "admin_duty_on") {
+        await member.roles.remove(offRole).catch(() => {});
+        await member.roles.add(onRole, "Admin beginnt Dienst");
+        await sendLog(interaction.guild, "🟢 **Admin im Dienst:** " + interaction.user.tag + " (`" + interaction.user.id + "`)");
+        return interaction.reply({ content: "🟢 Du bist jetzt im Dienst.", ephemeral: true });
+      }
+      await member.roles.remove(onRole).catch(() => {});
+      await member.roles.add(offRole, "Admin beendet Dienst");
+      await sendLog(interaction.guild, "⚪ **Admin außer Dienst:** " + interaction.user.tag + " (`" + interaction.user.id + "`)");
+      return interaction.reply({ content: "⚪ Du bist jetzt außer Dienst.", ephemeral: true });
+    } catch (error) {
+      console.error("Admin-Dienststatus:", error);
+      return interaction.reply({ content: "Dienststatus fehlgeschlagen. Prüfe Rollen verwalten und die Rollenposition des Bots.", ephemeral: true });
+    }
+  }
   if (interaction.isButton() && interaction.customId === "ticket_open") {
     try { return await openTicket(interaction); }
     catch (error) {
@@ -365,6 +388,19 @@ client.on("interactionCreate", async interaction => {
 
     try {
       const result = await applyServerPlan(interaction.guild, entry.plan, { replaceServer: entry.replaceServer, ownerId: interaction.user.id, keepChannelId: interaction.channelId });
+      const dutyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🟢・admin-dienst" || ch.name === "admin-dienst");
+      if (dutyChannel && dutyChannel.isTextBased()) {
+        const recent = await dutyChannel.messages.fetch({ limit: 30 }).catch(() => null);
+        const exists = recent && recent.some(message => message.author.id === client.user.id && message.embeds.some(embed => embed.title === "🟢 Admin-Dienst"));
+        if (!exists) {
+          const embed = new EmbedBuilder().setColor(0x2ECC71).setTitle("🟢 Admin-Dienst").setDescription("Nutze die Buttons, um deinen Dienst zu beginnen oder zu beenden. Deine Rolle wird automatisch gewechselt und der Status im Bot-Log protokolliert.");
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("admin_duty_on").setLabel("Dienst beginnen").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("admin_duty_off").setLabel("Außer Dienst").setStyle(ButtonStyle.Secondary)
+          );
+          await dutyChannel.send({ embeds: [embed], components: [row] });
+        }
+      }
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
