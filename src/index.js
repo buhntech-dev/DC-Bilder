@@ -9,6 +9,7 @@ const {
   ButtonStyle
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
+const { createMinecraftPreset } = require("./minecraft-preset");
 const { applyServerPlan } = require("./discord-builder");
 
 const required = ["DISCORD_TOKEN", "OWNER_ID"];
@@ -65,8 +66,10 @@ client.on("interactionCreate", async interaction => {
 
     await interaction.deferReply({ ephemeral: true });
     try {
-      const prompt = interaction.options.getString("prompt", true);
-      const plan = await createServerPlan(prompt);
+      const prompt = interaction.options.getString("prompt");
+      const plan = interaction.commandName === "minecraft"
+        ? createMinecraftPreset()
+        : await createServerPlan(prompt);
 
       if (interaction.commandName === "plan") {
         return interaction.editReply({ embeds: [planEmbed(plan)] });
@@ -85,7 +88,9 @@ client.on("interactionCreate", async interaction => {
           .setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
-        content: "Dein kostenloser Serverplan ist fertig. Prüfe ihn und bestätige die Umsetzung:",
+        content: interaction.commandName === "minecraft"
+          ? "Dein vorgefertigter Minecraft-Discord ist bereit. Prüfe die Struktur und bestätige die Umsetzung:"
+          : "Dein kostenloser Serverplan ist fertig. Prüfe ihn und bestätige die Umsetzung:",
         embeds: [planEmbed(plan)],
         components: [row]
       });
