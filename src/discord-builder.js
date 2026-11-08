@@ -19,7 +19,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   if (options.replaceServer === true) {
     // Erst Kanäle löschen, damit keine alten Bereiche zurückbleiben.
     const keepCommandNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
-    const keepCommandChannels = guild.channels.cache.filter(channel => keepCommandNames.has(channel.name.toLowerCase()));
+    const keepCommandChannels = guild.channels.cache.filter(channel => keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId);
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
       if (keepCommandNames.has(channel.name.toLowerCase())) continue;
@@ -103,13 +103,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     for (const channel of category.channels) {
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
-      const options = {
+      const channelOptions = {
         name: channelName, type, parent: parent.id,
         permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
-      if (type === ChannelType.GuildText && channel.topic) options.topic = String(channel.topic).slice(0, 1024);
-      const createdChannel = await guild.channels.create(options);
+      if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
+      const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
 
       if (channel.verify && type === ChannelType.GuildText) {
