@@ -36,7 +36,8 @@ Für Railway:
 ## 4. Befehle
 - `/plan prompt: ...` zeigt den geplanten Serveraufbau, ohne etwas zu ändern.
 - `/minecraft` baut ein Minecraft-Layout mit Rollen, Kategorien, Verifizierung, Support-Tickets, Teamverwaltung und Leitungsbüro auf. Der vollständige Neuaufbau löscht nach doppelter Bestätigung vorhandene Kanäle und löschbare Rollen.
-- `/ticketpanel` veröffentlicht ein Support-Panel. Mitglieder können private Tickets erstellen und schließen; Support-Rollen und Moderatoren sehen diese ebenfalls.
+- `/ticketpanel` veröffentlicht ein Support-Panel. Mitglieder können private Tickets erstellen und schließen; Support-Rollen und Moderatoren sehen diese ebenfalls. Beim Minecraft-Aufbau wird das Panel automatisch im Ticket-Kanal erstellt.
+- `/server-leeren` löscht nach einer Bestätigung alle löschbaren Kanäle und Rollen. Ein Kanal namens `#bot-commands`, `#bot-befehle` oder `#botcommands` bleibt erhalten. Auch `/minecraft` lässt diesen Befehle-Kanal stehen.
 - `/clear anzahl`, `/kick mitglied`, `/ban mitglied`, `/timeout mitglied minuten`, `/announce text`, `/lock`, `/unlock`, `/slowmode sekunden` und `/serverinfo` sind grundlegende Moderations- und Verwaltungsbefehle.
 - `/build prompt: ...` zeigt einen Plan. Erst nach Klick auf **Server jetzt erstellen** wird er angelegt.
 
@@ -46,7 +47,7 @@ Beispiel:
 ## Funktionsweise und Grenzen
 - Der kostenlose Planer erkennt Stichwörter wie Gaming, Minecraft, FiveM, Feuerwehr, Rettungsdienst, Polizei, Schule, Support und Musik und kombiniert passende Vorlagen.
 - Freie Formulierungen funktionieren, soweit sie passende Stichwörter enthalten. Er versteht keine beliebig komplexen Wünsche wie ein großes Sprachmodell.
-- Das integrierte Ticket-System erstellt private Kanäle und protokolliert Öffnen/Schließen im Bot-Log, sofern der Log-Kanal vorhanden ist. Es ist ein einfaches Ticket-System ohne Datenbank/Transkriptarchiv.
+- Das integrierte Ticket-System erstellt private Kanäle und protokolliert Öffnen/Schließen im Bot-Log, sofern der Log-Kanal vorhanden ist. Es ist ein einfaches Ticket-System ohne Datenbank/Transkriptarchiv. Die Moderations- und Verwaltungsfunktionen umfassen Nachrichten löschen, Kick, Ban, Timeout, Ankündigungen, Kanalsperre, Entsperren, Slowmode, Serverinfo und Server-Leerung.
 - Moderationsbefehle benötigen die passenden Discord-Rechte. Der Bot muss außerdem über der zu verwaltenden Rollen-Hierarchie stehen.
 - Rollen erhalten keine Administrator- oder Verwaltungsrechte.
 - Private Kanäle werden nur dann gesperrt, wenn mindestens eine der angegebenen Rollen tatsächlich erstellt wurde.
