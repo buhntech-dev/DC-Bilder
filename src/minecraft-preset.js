@@ -61,7 +61,10 @@ function createMinecraftPreset() {
       ch("🐞・bug-melden", "Fehler und Probleme melden"),
       ch("🚨・spieler-melden", "Regelverstöße melden – bitte sachlich"),
       ch("📩・support-team", "Interner Supportbereich", ["Supporter", "Moderator", "Administrator"]),
-      ch("🔊・Support-Warteraum", "Wartebereich für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
+      ch("🔊・Support-Warteraum", "Wartebereich für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
+      ch("🔊・Support-Raum 1", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
+      ch("🔊・Support-Raum 2", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
+      ch("🔊・Support-Raum 3", "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
     ]),
     cat("🔊 SPRACHKANÄLE", [
       ch("🔊・Community 1", "Offener Sprachkanal", [], "voice"),
