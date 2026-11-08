@@ -83,7 +83,7 @@ function createMinecraftPreset() {
 
   return {
     serverName: "Minecraft Community",
-    summary: "Vorgefertigtes hochwertiges Minecraft-Discord-Layout mit Startbereich, Serverinformationen, Community, Survival, Spielmodi, Support, Sprachkanälen sowie getrennten Team- und Leitungsbereichen. Private Teamkanäle werden passend zu den angelegten Rollen geschützt. Passe IP-Adresse, Version und Links anschließend in den Kanalbeschreibungen an.",
+    summary: "Premium Minecraft-Discord mit strukturierten Start- und Info-Bereichen, Community, Survival, Spielmodi, Support, Voice, Teamverwaltung und Leitung. Owner erhält Administratorrechte; Management und Administrator erhalten abgestufte Verwaltungsrechte. Private Bereiche werden rollenbasiert geschützt. Weise die Owner-Rolle nach dem Aufbau ausschließlich deinem eigenen Account zu und ergänze Server-IP/Version.",
     roles,
     categories
   };
