@@ -55,6 +55,30 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
 
+  // Eigene Bot-Rolle mit Administratorrechten erstellen und dem Bot zuweisen.
+  // Discord erlaubt dies nur unterhalb der höchsten Rolle der Bot-Integration.
+  const botMember = await guild.members.fetchMe();
+  let botRole = guild.roles.cache.find(role => role.name === "Bot" && !role.managed);
+  if (!botRole) {
+    botRole = await guild.roles.create({
+      name: "Bot", color: "#5865F2", hoist: true,
+      permissions: [PermissionFlagsBits.Administrator],
+      reason: "Discord Server Builder – Bot-Verwaltungsrolle"
+    });
+    created.roles++;
+  } else {
+    if (botRole.comparePositionTo(botMember.roles.highest) >= 0) {
+      throw new Error("Die Rolle 'Bot' muss unter der höchsten Bot-Integrationsrolle stehen.");
+    }
+    await botRole.setPermissions([PermissionFlagsBits.Administrator], "Bot-Verwaltungsrolle aktualisieren");
+  }
+  if (botRole.comparePositionTo(botMember.roles.highest) >= 0) {
+    throw new Error("Discord blockiert die Zuweisung: Verschiebe die Bot-Integrationsrolle über die Rolle 'Bot'.");
+  }
+  if (!botMember.roles.cache.has(botRole.id)) {
+    await botMember.roles.add(botRole, "Bot-Verwaltungsrechte zuweisen");
+  }
+
   // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
   const createdRoleList = [];
   for (const [index, role] of plan.roles.entries()) {
