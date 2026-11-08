@@ -41,7 +41,12 @@ async function joinSupportVoice(client, guild) {
     selfDeaf: true,
     selfMute: false
   });
-  await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, 12_000);
+  } catch (error) {
+    connection.destroy();
+    throw new Error(`Voice-Verbindung zu #${channel.name} nicht bereit (Bot-Rechte, Kanal-ID und Voice-Verbindung prüfen): ${error.message}`);
+  }
 
   const player = createAudioPlayer();
   connection.subscribe(player);
