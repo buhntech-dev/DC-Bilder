@@ -65,7 +65,7 @@ function createMinecraftPreset() {
     cat("🔊 SUPPORT-SPRACHRÄUME", [
       ch("🔊・Support-Warteraum", "Wartebereich für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice"),
       ...Array.from({ length: 10 }, (_, index) =>
-        ch("🔊・Support-Raum-" + String(index + 1).padStart(2, "0"), "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
+        ch("Support " + (index + 1), "Privater Sprachraum für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
       )
     ]),
     cat("🔊 SPRACHKANÄLE", [
