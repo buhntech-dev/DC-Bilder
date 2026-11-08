@@ -10,6 +10,8 @@ function createMinecraftPreset() {
     { name: "Owner", color: "#E74C3C", hoist: true, mentionable: false },
     { name: "Management", color: "#9B59B6", hoist: true, mentionable: false },
     { name: "Administrator", color: "#E67E22", hoist: true, mentionable: false },
+    { name: "Admin im Dienst", color: "#2ECC71", hoist: true, mentionable: false },
+    { name: "Admin außer Dienst", color: "#95A5A6", hoist: true, mentionable: false },
     { name: "Moderator", color: "#3498DB", hoist: true, mentionable: false },
     { name: "Supporter", color: "#1ABC9C", hoist: true, mentionable: false },
     { name: "Developer", color: "#34495E", hoist: true, mentionable: false },
@@ -81,6 +83,7 @@ function createMinecraftPreset() {
       ch("💬・team-chat", "Interner Teamchat", ["Management", "Administrator", "Moderator", "Supporter"]),
       ch("📋・team-planung", "Aufgaben und Planung", ["Management", "Administrator"]),
       ch("🧾・reports", "Interne Meldungen und Reports", ["Management", "Administrator", "Moderator"]),
+      ch("🟢・admin-dienst", "Admin-Dienststatus: Hier können Administratoren ihren Dienst starten oder beenden", ["Owner", "Management", "Administrator"]),
       ch("📁・bewerbungen-team", "Bewerbungen bearbeiten", ["Management", "Administrator"]),
       ch("🧱・build-team", "Absprachen des Bauteams", ["Management", "Builder", "Administrator"]),
       ch("💻・dev-team", "Technik und Entwicklung", ["Management", "Developer", "Administrator"])
