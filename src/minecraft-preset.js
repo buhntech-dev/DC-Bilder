@@ -1,7 +1,7 @@
 // Vorgefertigtes Minecraft-Community-Serverlayout.
 // Wird lokal geladen und benötigt weder Prompt noch externe KI.
-function ch(name, topic = "", privateToRoles = [], type = "text") {
-  return { name, type, topic, privateToRoles };
+function ch(name, topic = "", privateToRoles = [], type = "text", verify = false) {
+  return { name, type, topic, privateToRoles, verify };
 }
 function cat(name, channels) { return { name, channels }; }
 
