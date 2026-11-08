@@ -4,7 +4,7 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const commands = [
   new SlashCommandBuilder()
     .setName("build")
-    .setDescription("Erstellt deinen Discord-Server aus einem KI-Prompt")
+    .setDescription("Erstellt deinen Discord-Server aus einem Prompt")
     .addStringOption(option =>
       option.setName("prompt")
         .setDescription("Beschreibe deinen gewünschten Discord-Server")
@@ -13,11 +13,10 @@ const commands = [
     ),
   new SlashCommandBuilder()
     .setName("minecraft")
-    .setDescription("Erstellt den vorgefertigten Minecraft-Discord-Server")
-    .toJSON(),
+    .setDescription("Erstellt den vorgefertigten Minecraft-Discord-Server"),
   new SlashCommandBuilder()
     .setName("plan")
-    .setDescription("Erstellt einen KI-Plan, ohne etwas am Server zu ändern")
+    .setDescription("Erstellt einen Serverplan, ohne etwas am Server zu ändern")
     .addStringOption(option =>
       option.setName("prompt")
         .setDescription("Beschreibe deinen gewünschten Discord-Server")
