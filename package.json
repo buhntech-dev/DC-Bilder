@@ -7,9 +7,13 @@
     "start": "node src/index.js",
     "register": "node src/register-commands.js"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "discord.js": "14.19.3",
-    "dotenv": "16.4.7"
+    "dotenv": "16.4.7",
+    "@discordjs/voice": "0.18.0",
+    "play-dl": "1.9.7"
   }
 }
