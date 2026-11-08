@@ -35,7 +35,9 @@ Für Railway:
 
 ## 4. Befehle
 - `/plan prompt: ...` zeigt den geplanten Serveraufbau, ohne etwas zu ändern.
-- `/minecraft` lädt ein hochwertiges, fest gespeichertes Minecraft-Serverlayout mit Rollen, Kategorien, Text- und Sprachkanälen. Kein Prompt und keine KI-API nötig.
+- `/minecraft` baut ein Minecraft-Layout mit Rollen, Kategorien, Verifizierung, Support-Tickets, Teamverwaltung und Leitungsbüro auf. Der vollständige Neuaufbau löscht nach doppelter Bestätigung vorhandene Kanäle und löschbare Rollen.
+- `/ticketpanel` veröffentlicht ein Support-Panel. Mitglieder können private Tickets erstellen und schließen; Support-Rollen und Moderatoren sehen diese ebenfalls.
+- `/clear anzahl`, `/kick mitglied`, `/ban mitglied`, `/timeout mitglied minuten`, `/announce text`, `/lock`, `/unlock`, `/slowmode sekunden` und `/serverinfo` sind grundlegende Moderations- und Verwaltungsbefehle.
 - `/build prompt: ...` zeigt einen Plan. Erst nach Klick auf **Server jetzt erstellen** wird er angelegt.
 
 Beispiel:
@@ -44,7 +46,8 @@ Beispiel:
 ## Funktionsweise und Grenzen
 - Der kostenlose Planer erkennt Stichwörter wie Gaming, Minecraft, FiveM, Feuerwehr, Rettungsdienst, Polizei, Schule, Support und Musik und kombiniert passende Vorlagen.
 - Freie Formulierungen funktionieren, soweit sie passende Stichwörter enthalten. Er versteht keine beliebig komplexen Wünsche wie ein großes Sprachmodell.
-- Er erstellt Rollen, Kategorien und Kanäle, aber keine vollständigen Ticket-, Musik-, Moderations- oder Datenbanksysteme.
+- Das integrierte Ticket-System erstellt private Kanäle und protokolliert Öffnen/Schließen im Bot-Log, sofern der Log-Kanal vorhanden ist. Es ist ein einfaches Ticket-System ohne Datenbank/Transkriptarchiv.
+- Moderationsbefehle benötigen die passenden Discord-Rechte. Der Bot muss außerdem über der zu verwaltenden Rollen-Hierarchie stehen.
 - Rollen erhalten keine Administrator- oder Verwaltungsrechte.
 - Private Kanäle werden nur dann gesperrt, wenn mindestens eine der angegebenen Rollen tatsächlich erstellt wurde.
 - Bestehende Serverelemente werden nicht gelöscht.
