@@ -82,6 +82,47 @@ async function openTicket(interaction) {
 client.once("ready", () => console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`));
 
 client.on("interactionCreate", async interaction => {
+  if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
+    const [action, ownerId] = interaction.customId.split(":");
+    if (ownerId !== interaction.user.id || !isOwner(interaction)) {
+      return interaction.reply({ content: "Nur der konfigurierte Serverinhaber darf das ausführen.", ephemeral: true });
+    }
+    if (action === "serverwipe_cancel") {
+      return interaction.update({ content: "Abgebrochen. Dein Server bleibt unverändert.", components: [] });
+    }
+    if (action === "serverwipe_confirm") {
+      await interaction.update({ content: "🧹 Server wird geleert. Bot-Befehle-Kanal bleibt erhalten …", components: [] });
+      try {
+        const guild = interaction.guild;
+        const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+        const keepChannels = guild.channels.cache.filter(ch => keepNames.has(ch.name.toLowerCase()));
+        const keepParentIds = new Set(keepChannels.map(ch => ch.parentId).filter(Boolean));
+        let deletedChannels = 0, failedChannels = 0, deletedRoles = 0, failedRoles = 0;
+        for (const channel of [...guild.channels.cache.values()]) {
+          if (keepNames.has(channel.name.toLowerCase())) continue;
+          if (channel.type === ChannelType.GuildCategory && keepParentIds.has(channel.id)) continue;
+          try { await channel.delete("Serverinhaber hat /server-leeren bestätigt"); deletedChannels++; }
+          catch (error) { failedChannels++; console.warn("Kanal-Löschung fehlgeschlagen:", channel.name, error.message); }
+        }
+        const botMember = await guild.members.fetchMe();
+        const botHighest = botMember.roles.highest;
+        for (const role of [...guild.roles.cache.values()]) {
+          if (role.id === guild.id || role.managed || role.id === botHighest.id || role.comparePositionTo(botHighest) >= 0) continue;
+          try { await role.delete("Serverinhaber hat /server-leeren bestätigt"); deletedRoles++; }
+          catch (error) { failedRoles++; console.warn("Rollen-Löschung fehlgeschlagen:", role.name, error.message); }
+        }
+        await sendLog(guild, "🧹 Server-Leerung abgeschlossen. Gelöschte Kanäle: " + deletedChannels + ", gelöschte Rollen: " + deletedRoles + ".");
+        return interaction.followUp({
+          content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Der Bot-Befehle-Kanal sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
+          ephemeral: true
+        });
+      } catch (error) {
+        console.error("Server-Leerung fehlgeschlagen:", error);
+        return interaction.followUp({ content: "Server-Leerung fehlgeschlagen: " + String(error.message || error).slice(0, 500), ephemeral: true });
+      }
+    }
+  }
+
   if (interaction.isButton() && interaction.customId === "ticket_open") {
     try { return await openTicket(interaction); }
     catch (error) {
@@ -104,8 +145,21 @@ client.on("interactionCreate", async interaction => {
   }
   if (interaction.isChatInputCommand()) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
-    const ownerOnly = ["build", "minecraft", "plan"].includes(interaction.commandName);
+    const ownerOnly = ["build", "minecraft", "plan", "server-leeren"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.reply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
+    if (interaction.commandName === "server-leeren") {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("serverwipe_confirm:" + interaction.user.id)
+          .setLabel("Ja, Server leeren").setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId("serverwipe_cancel:" + interaction.user.id)
+          .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
+      );
+      return interaction.reply({
+        content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Ein Kanal namens **#bot-commands**, **#bot-befehle** oder **#botcommands** bleibt erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
+        components: [row], ephemeral: true
+      });
+    }
+
     const permissions = {
       clear: PermissionFlagsBits.ManageMessages, kick: PermissionFlagsBits.KickMembers,
       ban: PermissionFlagsBits.BanMembers, timeout: PermissionFlagsBits.ModerateMembers,
