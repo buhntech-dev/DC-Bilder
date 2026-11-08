@@ -6,6 +6,7 @@ const {
 const { createServerPlan } = require("./ai");
 const { createMinecraftPreset } = require("./minecraft-preset");
 const { applyServerPlan } = require("./discord-builder");
+const { joinSupportVoice } = require("./support-voice");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -14,7 +15,7 @@ for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   }
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] });
 const pendingPlans = new Map();
 
 function isOwner(interaction) {
@@ -79,7 +80,13 @@ async function openTicket(interaction) {
   return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
 }
 
-client.once("ready", () => console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`));
+client.once("ready", async () => {
+  console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
+  for (const guild of client.guilds.cache.values()) {
+    try { await joinSupportVoice(client, guild); }
+    catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
+  }
+});
 
 client.on("interactionCreate", async interaction => {
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
@@ -334,6 +341,8 @@ client.on("interactionCreate", async interaction => {
 
     try {
       const result = await applyServerPlan(interaction.guild, entry.plan, { replaceServer: entry.replaceServer, ownerId: interaction.user.id });
+      try { await joinSupportVoice(client, interaction.guild); }
+      catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
         content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nGelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\nDie Rolle **Owner** musst du deinem eigenen Account zuweisen. Prüfe außerdem die Bot-Rolle: Sie muss in der Rollenliste über den vom Bot verwalteten Rollen stehen.`,
         ephemeral: true
