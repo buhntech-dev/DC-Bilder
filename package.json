@@ -1,20 +1,15 @@
-
 {
   "name": "ai-discord-server-builder",
-  "version": "1.0.2",
-  "description": "AI Discord Server Builder mit OpenAI",
+  "version": "1.1.0",
+  "description": "Kostenloser Discord Server Builder ohne externe KI-API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "register": "node src/register-commands.js"
   },
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "dependencies": {
     "discord.js": "14.19.3",
-    "dotenv": "16.4.7",
-    "openai": "5.20.0",
-    "zod": "3.25.76"
+    "dotenv": "16.4.7"
   }
 }
