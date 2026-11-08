@@ -81,6 +81,12 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
 
+  // Der auslösende Serverinhaber erhält die Owner-Rolle automatisch.
+  if (options.ownerId && createdRoles.has("owner")) {
+    const ownerMember = await guild.members.fetch(options.ownerId);
+    await ownerMember.roles.add(createdRoles.get("owner"), "Minecraft-Server wurde vom Inhaber neu aufgebaut");
+  }
+
   for (const category of plan.categories) {
     const parent = await guild.channels.create({
       name: cleanName(category.name, "Kategorie"),
