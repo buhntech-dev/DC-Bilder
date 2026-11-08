@@ -8,19 +8,77 @@ function validColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#5865F2";
 }
 
-async function applyServerPlan(guild, plan) {
+async function applyServerPlan(guild, plan, options = {}) {
   const createdRoles = new Map();
-  const created = { roles: 0, categories: 0, channels: 0 };
+  const created = {
+    roles: 0, categories: 0, channels: 0,
+    deletedChannels: 0, deletedRoles: 0, skippedRoles: 0, failedDeletes: 0
+  };
 
-  for (const role of plan.roles) {
+  // Nur /minecraft darf den bestehenden Server ersetzen.
+  if (options.replaceServer === true) {
+    // Erst Kanäle löschen, damit keine alten Bereiche zurückbleiben.
+    for (const channel of [...guild.channels.cache.values()]) {
+      try {
+        await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
+        created.deletedChannels++;
+      } catch (error) {
+        created.failedDeletes++;
+        console.warn(`Kanal konnte nicht gelöscht werden (${channel.name}): ${error.message}`);
+      }
+    }
+
+    // @everyone, verwaltete Integrationsrollen und die Bot-eigene Rolle bleiben bestehen.
+    const botMember = await guild.members.fetchMe();
+    const botHighest = botMember.roles.highest;
+    const rolesToDelete = [...guild.roles.cache.values()]
+      .filter(role =>
+        role.id !== guild.id &&
+        !role.managed &&
+        role.id !== botHighest.id &&
+        role.comparePositionTo(botHighest) < 0
+      );
+
+    for (const role of rolesToDelete) {
+      try {
+        await role.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
+        created.deletedRoles++;
+      } catch (error) {
+        created.skippedRoles++;
+        console.warn(`Rolle konnte nicht gelöscht werden (${role.name}): ${error.message}`);
+      }
+    }
+  }
+
+  // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
+  const createdRoleList = [];
+  for (const [index, role] of plan.roles.entries()) {
     const name = cleanName(role.name, "Neue Rolle");
+    const permissions = rolePermissions(name);
     const createdRole = await guild.roles.create({
       name, color: validColor(role.color), hoist: Boolean(role.hoist),
-      mentionable: Boolean(role.mentionable), permissions: [],
+      mentionable: Boolean(role.mentionable), permissions,
       reason: "Discord Server Builder – vom Serverinhaber bestätigt"
     });
     createdRoles.set(name.toLowerCase(), createdRole);
+    createdRoleList.push({ role: createdRole, index });
     created.roles++;
+  }
+
+  // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
+  const positions = createdRoleList
+    .slice()
+    .reverse()
+    .map(({ role }, index) => ({
+      role: role.id,
+      position: Math.max(1, index + 1)
+    }));
+  if (positions.length) {
+    try {
+      await guild.roles.setPositions(positions);
+    } catch (error) {
+      console.warn("Rollen konnten nicht vollständig sortiert werden:", error.message);
+    }
   }
 
   for (const category of plan.categories) {
@@ -47,11 +105,28 @@ async function applyServerPlan(guild, plan) {
   return created;
 }
 
+function rolePermissions(name) {
+  const p = PermissionFlagsBits;
+  if (name === "Owner") return [p.Administrator];
+  if (["Management", "Administrator"].includes(name)) {
+    return [
+      p.ManageChannels, p.ManageRoles, p.ManageMessages,
+      p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
+    ];
+  }
+  if (name === "Moderator") {
+    return [p.ManageMessages, p.ModerateMembers, p.KickMembers];
+  }
+  if (name === "Supporter") {
+    return [p.ManageMessages];
+  }
+  return [];
+}
+
 function buildChannelOverwrites(guild, names, roleMap) {
   const matchedRoles = [...new Set((names || [])
     .map(name => roleMap.get(String(name).toLowerCase()))
     .filter(Boolean))];
-  // Keine passende Rolle gefunden? Kanal bleibt öffentlich statt versehentlich gesperrt zu werden.
   if (!matchedRoles.length) return [];
   return [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
