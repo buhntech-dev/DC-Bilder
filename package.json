@@ -1,0 +1,17 @@
+{
+  "name": "ai-discord-server-builder",
+  "version": "1.0.0",
+  "description": "Erstellt Discord-Serverstrukturen aus freien Prompts mit OpenAI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "register": "node src/register-commands.js"
+  },
+  "engines": { "node": ">=20.0.0" },
+  "dependencies": {
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.4.7",
+    "openai": "^5.20.0",
+    "zod": "^4.1.12"
+  }
+}
