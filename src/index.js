@@ -45,6 +45,29 @@ function planEmbed(plan, replaceServer = false) {
 }
 
 
+async function sendRuleLog(guild, message) {
+  const logChannel = guild.channels.cache.find(ch =>
+    ch.name === "📜・regel-logs" || ch.name === "regel-logs"
+  );
+  if (!logChannel || !logChannel.isTextBased()) {
+    console.warn("Regel-Logs nicht gefunden. Bitte den Kanal #regel-logs erstellen oder /minecraft neu aufbauen.");
+    return false;
+  }
+  try {
+    await logChannel.send({
+      embeds: [new EmbedBuilder()
+        .setColor(0x2ECC71)
+        .setTitle("📜 Regelbestätigung")
+        .setDescription(message)
+        .setTimestamp()]
+    });
+    return true;
+  } catch (error) {
+    console.warn("Regel-Log konnte nicht gespeichert werden:", error.message);
+    return false;
+  }
+}
+
 async function sendLog(guild, message) {
   const logChannel = guild.channels.cache.find(ch => ch.name === "🤖・bot-logs" || ch.name === "bot-logs");
   if (logChannel && logChannel.isTextBased()) {
@@ -288,7 +311,7 @@ client.on("interactionCreate", async interaction => {
         return interaction.reply({ content: "Du bist bereits bestätigt. Viel Spaß auf dem Server!", ephemeral: true });
       }
       await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
-      await sendLog(interaction.guild, "✅ **Regelbestätigung:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln akzeptiert und die Rolle **Mitglied** erhalten.");
+      await sendRuleLog(interaction.guild, "✅ **Regel akzeptiert:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln bestätigt und die Rolle **Mitglied** erhalten.");
       return interaction.reply({ content: "✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!", ephemeral: true });
     } catch (error) {
       console.error("Fehler bei Minecraft-Verifizierung:", error);
