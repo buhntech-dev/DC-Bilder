@@ -12,6 +12,10 @@ const commands = [
         .setMaxLength(4000)
     ),
   new SlashCommandBuilder()
+    .setName("minecraft")
+    .setDescription("Erstellt den vorgefertigten Minecraft-Discord-Server")
+    .toJSON(),
+  new SlashCommandBuilder()
     .setName("plan")
     .setDescription("Erstellt einen KI-Plan, ohne etwas am Server zu ändern")
     .addStringOption(option =>
@@ -29,7 +33,7 @@ async function main() {
   }
   const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
   await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-  console.log("Slash-Befehle /build und /plan wurden registriert.");
+  console.log("Slash-Befehle /build, /plan und /minecraft wurden registriert.");
 }
 main().catch(error => {
   console.error(error);
