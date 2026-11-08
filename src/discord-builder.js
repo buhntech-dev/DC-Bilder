@@ -122,6 +122,21 @@ async function applyServerPlan(guild, plan, options = {}) {
         );
         await createdChannel.send({ embeds: [embed], components: [row] });
       }
+      if (/ticket-erstellen/.test(channelName) && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle("🎫 Support-Center")
+          .setDescription("Du brauchst Hilfe? Klicke auf **Ticket erstellen**. Dein privater Kanal ist nur für dich und das Support-Team sichtbar.")
+          .setFooter({ text: "Support • Wir helfen dir gerne" });
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("ticket_open")
+            .setLabel("Ticket erstellen")
+            .setStyle(ButtonStyle.Success)
+            .setEmoji("🎫")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
     }
   }
   return created;
