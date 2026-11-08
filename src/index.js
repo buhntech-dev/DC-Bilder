@@ -288,6 +288,7 @@ client.on("interactionCreate", async interaction => {
         return interaction.reply({ content: "Du bist bereits bestätigt. Viel Spaß auf dem Server!", ephemeral: true });
       }
       await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
+      await sendLog(interaction.guild, "✅ **Regelbestätigung:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln akzeptiert und die Rolle **Mitglied** erhalten.");
       return interaction.reply({ content: "✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!", ephemeral: true });
     } catch (error) {
       console.error("Fehler bei Minecraft-Verifizierung:", error);
