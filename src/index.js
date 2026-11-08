@@ -1,6 +1,6 @@
 require("dotenv").config();
 const {
-  Client, GatewayIntentBits, PermissionFlagsBits, EmbedBuilder,
+  Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, EmbedBuilder,
   ActionRowBuilder, ButtonBuilder, ButtonStyle
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
@@ -43,17 +43,149 @@ function planEmbed(plan, replaceServer = false) {
   return embed.setFooter({ text: "Der Aufbau startet erst nach deiner ausdrücklichen Bestätigung." });
 }
 
+
+async function sendLog(guild, message) {
+  const logChannel = guild.channels.cache.find(ch => ch.name === "🤖・bot-logs" || ch.name === "bot-logs");
+  if (logChannel && logChannel.isTextBased()) {
+    try { await logChannel.send({ embeds: [new EmbedBuilder().setColor(0x5865F2).setDescription(message).setTimestamp()] }); }
+    catch (error) { console.warn("Log konnte nicht gesendet werden:", error.message); }
+  }
+}
+function hasPermission(interaction, permission) {
+  return interaction.memberPermissions?.has(permission) || isOwner(interaction);
+}
+async function openTicket(interaction) {
+  await interaction.deferReply({ ephemeral: true });
+  const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
+  const existing = interaction.guild.channels.cache.find(ch => ch.topic === "ticket-owner:" + interaction.user.id);
+  if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
+  const supportRoles = interaction.guild.roles.cache.filter(role => ["Supporter", "Moderator", "Administrator", "Management", "Owner"].includes(role.name));
+  const overwrites = [
+    { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+    ...supportRoles.map(role => ({ id: role.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
+  ];
+  const category = interaction.guild.channels.cache.find(ch => ch.type === ChannelType.GuildCategory && /support|ticket/i.test(ch.name));
+  const ticket = await interaction.guild.channels.create({
+    name: "ticket-" + safeName, type: ChannelType.GuildText,
+    topic: "ticket-owner:" + interaction.user.id, parent: category?.id,
+    permissionOverwrites: overwrites, reason: "Support-Ticket von " + interaction.user.tag
+  });
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("ticket_close").setLabel("Ticket schließen").setStyle(ButtonStyle.Danger).setEmoji("🔒")
+  );
+  await ticket.send({ content: interaction.user.toString() + " willkommen im Support! Beschreibe bitte dein Anliegen.", components: [row] });
+  await sendLog(interaction.guild, "🎫 " + interaction.user.tag + " hat ein Ticket erstellt: " + ticket.toString());
+  return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
+}
+
 client.once("ready", () => console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`));
 
 client.on("interactionCreate", async interaction => {
+  if (interaction.isButton() && interaction.customId === "ticket_open") {
+    try { return await openTicket(interaction); }
+    catch (error) {
+      console.error("Ticket konnte nicht geöffnet werden:", error);
+      const message = "Ticket konnte nicht erstellt werden. Prüfe die Bot-Berechtigung Kanäle verwalten.";
+      if (interaction.deferred || interaction.replied) return interaction.editReply(message);
+      return interaction.reply({ content: message, ephemeral: true });
+    }
+  }
+  if (interaction.isButton() && interaction.customId === "ticket_close") {
+    const match = interaction.channel?.topic?.match(/ticket-owner:(\d+)/);
+    const ownerId = match && match[1];
+    if (!hasPermission(interaction, PermissionFlagsBits.ManageChannels) && ownerId !== interaction.user.id) {
+      return interaction.reply({ content: "Nur Ticket-Ersteller oder Team dürfen schließen.", ephemeral: true });
+    }
+    await interaction.reply({ content: "🔒 Ticket wird geschlossen und in 5 Sekunden gelöscht." });
+    await sendLog(interaction.guild, "🔒 Ticket " + interaction.channel.name + " wurde von " + interaction.user.tag + " geschlossen.");
+    setTimeout(() => interaction.channel.delete("Support-Ticket geschlossen").catch(console.error), 5000);
+    return;
+  }
   if (interaction.isChatInputCommand()) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
-    if (!isOwner(interaction)) return interaction.reply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ||
-        !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
-      return interaction.reply({ content: "Dir fehlen **Kanäle verwalten** und **Rollen verwalten**.", ephemeral: true });
+    const ownerOnly = ["build", "minecraft", "plan"].includes(interaction.commandName);
+    if (ownerOnly && !isOwner(interaction)) return interaction.reply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
+    const permissions = {
+      clear: PermissionFlagsBits.ManageMessages, kick: PermissionFlagsBits.KickMembers,
+      ban: PermissionFlagsBits.BanMembers, timeout: PermissionFlagsBits.ModerateMembers,
+      announce: PermissionFlagsBits.ManageMessages, lock: PermissionFlagsBits.ManageChannels,
+      unlock: PermissionFlagsBits.ManageChannels, slowmode: PermissionFlagsBits.ManageChannels,
+      ticketpanel: PermissionFlagsBits.ManageChannels
+    };
+    const needed = permissions[interaction.commandName];
+    if (needed && !hasPermission(interaction, needed)) return interaction.reply({ content: "Dir fehlt die nötige Berechtigung.", ephemeral: true });
+    if (ownerOnly && (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles))) {
+      return interaction.reply({ content: "Dir fehlen Kanäle verwalten und Rollen verwalten.", ephemeral: true });
     }
-
+    if (!ownerOnly) {
+      try {
+        const cmd = interaction.commandName;
+        if (cmd === "ticketpanel") {
+          const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Klicke auf Ticket erstellen. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
+          const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket_open").setLabel("Ticket erstellen").setStyle(ButtonStyle.Success).setEmoji("🎫"));
+          await interaction.channel.send({ embeds: [embed], components: [row] });
+          return interaction.reply({ content: "Support-Panel wurde veröffentlicht.", ephemeral: true });
+        }
+        if (cmd === "clear") {
+          const amount = interaction.options.getInteger("anzahl", true);
+          const deleted = await interaction.channel.bulkDelete(amount, true);
+          await interaction.reply({ content: "🧹 " + deleted.size + " Nachrichten gelöscht. Ältere Nachrichten kann Discord nicht gesammelt löschen.", ephemeral: true });
+          await sendLog(interaction.guild, interaction.user.tag + " löschte " + deleted.size + " Nachrichten in #" + interaction.channel.name + ".");
+          return;
+        }
+        if (cmd === "kick" || cmd === "ban") {
+          const target = interaction.options.getMember("mitglied");
+          const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
+          if (!target) return interaction.reply({ content: "Mitglied nicht gefunden.", ephemeral: true });
+          if (target.id === interaction.user.id || target.id === interaction.guild.ownerId || (cmd === "kick" && !target.kickable) || (cmd === "ban" && !target.bannable)) return interaction.reply({ content: "Dieses Mitglied kann wegen der Rollen-Hierarchie nicht moderiert werden.", ephemeral: true });
+          if (cmd === "kick") await target.kick(reason); else await target.ban({ reason });
+          await interaction.reply({ content: "✅ " + target.user.tag + " wurde " + (cmd === "kick" ? "gekickt" : "gebannt") + ". Grund: " + reason, ephemeral: true });
+          await sendLog(interaction.guild, interaction.user.tag + " hat " + target.user.tag + " moderiert. Grund: " + reason);
+          return;
+        }
+        if (cmd === "timeout") {
+          const target = interaction.options.getMember("mitglied");
+          const minutes = interaction.options.getInteger("minuten", true);
+          const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
+          if (!target || !target.moderatable || target.id === interaction.user.id) return interaction.reply({ content: "Dieses Mitglied kann nicht stummgeschaltet werden.", ephemeral: true });
+          await target.timeout(minutes * 60000, reason);
+          await interaction.reply({ content: "⏳ Timeout für " + target.user.tag + ": " + minutes + " Minuten.", ephemeral: true });
+          await sendLog(interaction.guild, interaction.user.tag + " gab " + target.user.tag + " " + minutes + " Minuten Timeout. Grund: " + reason);
+          return;
+        }
+        if (cmd === "announce") {
+          const text = interaction.options.getString("text", true);
+          await interaction.channel.send({ embeds: [new EmbedBuilder().setColor(0xF1C40F).setTitle("📢 Ankündigung").setDescription(text).setFooter({ text: "Von " + interaction.user.tag }).setTimestamp()] });
+          return interaction.reply({ content: "Ankündigung wurde veröffentlicht.", ephemeral: true });
+        }
+        if (cmd === "lock" || cmd === "unlock") {
+          await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: cmd === "lock" ? false : null });
+          return interaction.reply({ content: cmd === "lock" ? "🔒 Kanal gesperrt." : "🔓 Kanalsperre aufgehoben." });
+        }
+        if (cmd === "slowmode") {
+          const seconds = interaction.options.getInteger("sekunden", true);
+          await interaction.channel.setRateLimitPerUser(seconds);
+          return interaction.reply({ content: "Zeitlupe auf " + seconds + " Sekunden gesetzt." });
+        }
+        if (cmd === "serverinfo") {
+          const g = interaction.guild;
+          const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("📊 " + g.name)
+            .addFields(
+              { name: "Mitglieder", value: String(g.memberCount), inline: true },
+              { name: "Kanäle", value: String(g.channels.cache.size), inline: true },
+              { name: "Rollen", value: String(g.roles.cache.size), inline: true },
+              { name: "Erstellt", value: "<t:" + Math.floor(g.createdTimestamp / 1000) + ":D>", inline: true }
+            ).setThumbnail(g.iconURL());
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+      } catch (error) {
+        console.error("Fehler bei /" + interaction.commandName + ":", error);
+        const message = "Fehler: " + String(error.message || error).slice(0, 500);
+        if (interaction.deferred || interaction.replied) return interaction.followUp({ content: message, ephemeral: true });
+        return interaction.reply({ content: message, ephemeral: true });
+      }
+    }
     await interaction.deferReply({ ephemeral: true });
     try {
       const isMinecraft = interaction.commandName === "minecraft";
