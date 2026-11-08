@@ -11,7 +11,7 @@ const {
 const { createServerPlan } = require("./ai");
 const { applyServerPlan } = require("./discord-builder");
 
-const required = ["DISCORD_TOKEN", "OWNER_ID", "OPENAI_API_KEY"];
+const required = ["DISCORD_TOKEN", "OWNER_ID"];
 for (const key of required) {
   if (!process.env[key]) {
     console.error(`Fehlende Umgebungsvariable: ${key}`);
@@ -35,19 +35,19 @@ function planEmbed(plan) {
   ).join("\n");
   return new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle(`KI-Serverplan: ${plan.serverName}`)
+    .setTitle(`Serverplan: ${plan.serverName}`)
     .setDescription(plan.summary.slice(0, 3500))
     .addFields(
       { name: `Rollen (${plan.roles.length})`, value: roleList.slice(0, 1000) },
       { name: `Kategorien (${plan.categories.length})`, value: categoryList.slice(0, 1000) },
       { name: "Gesamt", value: `${channelCount} Kanäle werden erstellt.`, inline: true },
-      { name: "Sicherheit", value: "Es werden nur neue Rollen/Kanäle erstellt. Bestehende Inhalte werden nicht gelöscht.", inline: true }
+      { name: "Modus", value: "Kostenlos – ohne externe KI-API.", inline: true }
     )
     .setFooter({ text: "Prüfe den Plan. Erst nach deiner Bestätigung wird er umgesetzt." });
 }
 
 client.once("ready", () => {
-  console.log(`AI Server Builder online als ${client.user.tag}`);
+  console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
 });
 
 client.on("interactionCreate", async interaction => {
@@ -85,7 +85,7 @@ client.on("interactionCreate", async interaction => {
           .setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
-        content: "Die KI hat deinen Serverplan erstellt. Prüfe ihn und bestätige die Umsetzung:",
+        content: "Dein kostenloser Serverplan ist fertig. Prüfe ihn und bestätige die Umsetzung:",
         embeds: [planEmbed(plan)],
         components: [row]
       });
