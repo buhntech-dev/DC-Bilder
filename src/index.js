@@ -129,7 +129,7 @@ client.on("interactionCreate", async interaction => {
     });
 
     try {
-      const result = await applyServerPlan(interaction.guild, entry.plan, { replaceServer: entry.replaceServer });
+      const result = await applyServerPlan(interaction.guild, entry.plan, { replaceServer: entry.replaceServer, ownerId: interaction.user.id });
       await interaction.followUp({
         content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nGelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\nDie Rolle **Owner** musst du deinem eigenen Account zuweisen. Prüfe außerdem die Bot-Rolle: Sie muss in der Rollenliste über den vom Bot verwalteten Rollen stehen.`,
         ephemeral: true
