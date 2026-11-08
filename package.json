@@ -1,7 +1,7 @@
 
 {
   "name": "ai-discord-server-builder",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI Discord Server Builder mit OpenAI",
   "main": "src/index.js",
   "scripts": {
@@ -15,6 +15,6 @@
     "discord.js": "14.19.3",
     "dotenv": "16.4.7",
     "openai": "5.20.0",
-    "zod": "4.1.12"
+    "zod": "3.25.76"
   }
 }
