@@ -22,7 +22,7 @@ const commands = [
         .setDescription("Beschreibe deinen gewünschten Discord-Server")
         .setRequired(true)
         .setMaxLength(4000)
-    )
+    ),
 
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
   new SlashCommandBuilder().setName("clear").setDescription("Löscht Nachrichten im aktuellen Kanal")
