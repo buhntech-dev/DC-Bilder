@@ -1,4 +1,4 @@
-const { ChannelType, PermissionFlagsBits } = require("discord.js");
+const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 function cleanName(value, fallback) {
   const name = String(value || fallback).trim().slice(0, 90);
@@ -104,8 +104,24 @@ async function applyServerPlan(guild, plan, options = {}) {
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) options.topic = String(channel.topic).slice(0, 1024);
-      await guild.channels.create(options);
+      const createdChannel = await guild.channels.create(options);
       created.channels++;
+
+      if (channel.verify && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x2ECC71)
+          .setTitle("Willkommen auf unserem Minecraft-Discord!")
+          .setDescription("Bitte lies zuerst die Serverregeln. Wenn du diese akzeptierst, klicke auf **Bestätigen**. Danach erhältst du die Rolle **Mitglied** und kannst die Community-Kanäle sehen.")
+          .setFooter({ text: "Minecraft Community • Verifizierung" });
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("minecraft_verify_member")
+            .setLabel("Regeln akzeptieren & bestätigen")
+            .setStyle(ButtonStyle.Success)
+            .setEmoji("✅")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
     }
   }
   return created;
