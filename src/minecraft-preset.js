@@ -22,7 +22,7 @@ function createMinecraftPreset() {
 
   const categories = [
     cat("📌 START HIER", [
-      ch("👋・willkommen", "Willkommen auf unserem Minecraft-Server"),
+      ch("👋・willkommen", "Automatische Begrüßung neuer Mitglieder mit Hinweisen zu Regeln und Bestätigung"),
       ch("✅・bestätigung", "Lies die Regeln und bestätige mit dem Button, um die Mitglied-Rolle zu erhalten", [], "text", true),
       ch("📜・regeln", "Bitte lies die Regeln vor dem Spielen"),
       ch("📢・ankündigungen", "Offizielle News und Updates"),
