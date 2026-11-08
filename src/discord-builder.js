@@ -18,7 +18,12 @@ async function applyServerPlan(guild, plan, options = {}) {
   // Nur /minecraft darf den bestehenden Server ersetzen.
   if (options.replaceServer === true) {
     // Erst Kanäle löschen, damit keine alten Bereiche zurückbleiben.
+    const keepCommandNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+    const keepCommandChannels = guild.channels.cache.filter(channel => keepCommandNames.has(channel.name.toLowerCase()));
+    const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
+      if (keepCommandNames.has(channel.name.toLowerCase())) continue;
+      if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedChannels++;
