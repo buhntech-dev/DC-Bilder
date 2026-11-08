@@ -23,6 +23,7 @@ function createMinecraftPreset() {
   const categories = [
     cat("📌 START HIER", [
       ch("👋・willkommen", "Willkommen auf unserem Minecraft-Server"),
+      ch("✅・bestätigung", "Lies die Regeln und bestätige mit dem Button, um die Mitglied-Rolle zu erhalten", [], "text", true),
       ch("📜・regeln", "Bitte lies die Regeln vor dem Spielen"),
       ch("📢・ankündigungen", "Offizielle News und Updates"),
       ch("🔗・server-beitritt", "IP-Adresse, Version und Beitrittsanleitung"),
@@ -53,11 +54,14 @@ function createMinecraftPreset() {
       ch("🧱・creative", "Creative und Bauideen"),
       ch("🎯・minigames", "Weitere Minispiele")
     ]),
-    cat("🎫 HILFE & SUPPORT", [
-      ch("❓・hilfe", "Häufige Fragen und Hilfestellungen"),
+    cat("🎫 SUPPORT & TICKETS", [
+      ch("📌・support-info", "So bekommst du Hilfe und erstellst ein Support-Ticket"),
+      ch("🎫・ticket-erstellen", "Erstelle hier eine Support-Anfrage"),
+      ch("❓・häufige-fragen", "Antworten auf häufige Fragen"),
       ch("🐞・bug-melden", "Fehler und Probleme melden"),
       ch("🚨・spieler-melden", "Regelverstöße melden – bitte sachlich"),
-      ch("📩・support-team", "Interner Supportbereich", ["Supporter", "Moderator", "Administrator"])
+      ch("📩・support-team", "Interner Supportbereich", ["Supporter", "Moderator", "Administrator"]),
+      ch("🔊・Support-Warteraum", "Wartebereich für Supportgespräche", ["Supporter", "Moderator", "Administrator"], "voice")
     ]),
     cat("🔊 SPRACHKANÄLE", [
       ch("🔊・Community 1", "Offener Sprachkanal", [], "voice"),
@@ -74,16 +78,28 @@ function createMinecraftPreset() {
       ch("🧱・build-team", "Absprachen des Bauteams", ["Management", "Builder", "Administrator"]),
       ch("💻・dev-team", "Technik und Entwicklung", ["Management", "Developer", "Administrator"])
     ]),
+    cat("🏢 LEITUNGSBÜRO", [
+      ch("👑・leitungsbüro", "Vertraulicher Austausch der Serverleitung", ["Owner", "Management"]),
+      ch("📋・leitungsbesprechung", "Sitzungen und Entscheidungen der Leitung", ["Owner", "Management"]),
+      ch("📈・serverplanung", "Planung und Weiterentwicklung des Servers", ["Owner", "Management"]),
+      ch("🤝・partner & projekte", "Partnerschaften und interne Projekte", ["Owner", "Management"])
+    ]),
+    cat("🛡️ TEAMVERWALTUNG", [
+      ch("📨・bewerbungen", "Bewerbungen für das Serverteam"),
+      ch("🗂️・bewerbungsbearbeitung", "Bewerbungen intern bearbeiten", ["Owner", "Management", "Administrator"]),
+      ch("📅・team-planung", "Aufgaben und Teamtermine", ["Owner", "Management", "Administrator"]),
+      ch("📝・team-protokolle", "Interne Protokolle", ["Owner", "Management", "Administrator"])
+    ]),
     cat("🔒 LEITUNG & LOGS", [
-      ch("👑・leitung", "Vertraulicher Leitungsbereich", ["Owner", "Management"]),
       ch("📊・server-logs", "Interne Serverprotokolle", ["Owner", "Management", "Administrator"]),
-      ch("⚙️・verwaltung", "Serververwaltung und Entscheidungen", ["Owner", "Management"])
+      ch("⚙️・verwaltung", "Serververwaltung und Entscheidungen", ["Owner", "Management"]),
+      ch("🤖・bot-logs", "Bot-Aktionen und technische Meldungen", ["Owner", "Management", "Administrator"])
     ])
   ];
 
   return {
     serverName: "Minecraft Community",
-    summary: "Premium Minecraft-Discord mit strukturierten Start- und Info-Bereichen, Community, Survival, Spielmodi, Support, Voice, Teamverwaltung und Leitung. Owner erhält Administratorrechte; Management und Administrator erhalten abgestufte Verwaltungsrechte. Private Bereiche werden rollenbasiert geschützt. Weise die Owner-Rolle nach dem Aufbau ausschließlich deinem eigenen Account zu und ergänze Server-IP/Version.",
+    summary: "Premium Minecraft-Discord mit Start, Bestätigung, Regeln, Community, Survival, Spielmodi, Support, Tickets, Teamverwaltung, Leitungsbüro und Logs. Die Bestätigungsschaltfläche vergibt die Mitglied-Rolle. Owner erhält Administratorrechte; private Bereiche sind rollenbasiert geschützt. Ergänze anschließend Server-IP und Version.",
     roles,
     categories
   };
