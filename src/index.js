@@ -15,7 +15,7 @@ for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   }
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers] });
 const pendingPlans = new Map();
 
 function isOwner(interaction) {
