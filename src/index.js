@@ -112,6 +112,7 @@ client.once("ready", async () => {
 });
 
 client.on("interactionCreate", async interaction => {
+  try {
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
     const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
@@ -451,6 +452,19 @@ client.on("interactionCreate", async interaction => {
       });
     }
   }
+  } catch (error) {
+    console.error("Nicht behandelter Fehler bei Discord-Interaktion:", error);
+    const message = "❌ Der Befehl konnte nicht ausgeführt werden: " + String(error?.message || error).slice(0, 500);
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.followUp({ content: message, ephemeral: true });
+      } else if (interaction.isRepliable()) {
+        await interaction.reply({ content: message, ephemeral: true });
+      }
+    } catch (replyError) {
+      console.error("Fehler beim Senden der Discord-Fehlermeldung:", replyError.message);
+    }
+  }
 });
-
+ 
 client.login(process.env.DISCORD_TOKEN);
