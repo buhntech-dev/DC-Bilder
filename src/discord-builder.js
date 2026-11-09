@@ -147,23 +147,38 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   // Der auslösende Serverinhaber erhält die Owner-Rolle automatisch.
   if (options.ownerId && createdRoles.has("owner")) {
-    const ownerMember = await guild.members.fetch(options.ownerId);
-    await ownerMember.roles.add(createdRoles.get("owner"), "Minecraft-Server wurde vom Inhaber neu aufgebaut");
+    try {
+      const ownerMember = await guild.members.fetch(options.ownerId);
+      await ownerMember.roles.add(createdRoles.get("owner"), "Minecraft-Server wurde vom Inhaber neu aufgebaut");
+    } catch (error) {
+      created.failedItems++;
+      created.errors.push("Owner-Rolle: " + String(error.message || error));
+      console.error("[SERVER-BUILD] Owner-Rolle konnte nicht vergeben werden:", error);
+    }
   }
 
   let completedCategories = 0;
   for (const category of plan.categories) {
     await updateProgress("Kategorien", "Erstelle " + category.name, 52 + Math.round(8 * completedCategories / Math.max(1, plan.categories.length)));
-    const parent = await guild.channels.create({
-      name: cleanName(category.name, "Kategorie"),
-      type: ChannelType.GuildCategory,
-      reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-    });
-    created.categories++;
+    let parent;
+    try {
+      parent = await guild.channels.create({
+        name: cleanName(category.name, "Kategorie"),
+        type: ChannelType.GuildCategory,
+        reason: "Discord Server Builder – vom Serverinhaber bestätigt"
+      });
+      created.categories++;
+    } catch (error) {
+      created.failedItems++;
+      created.errors.push("Kategorie " + category.name + ": " + String(error.message || error));
+      console.error("[SERVER-BUILD] Kategorie fehlgeschlagen:", category.name, error);
+      continue;
+    }
     completedCategories++;
 
     for (const channel of category.channels) {
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
+      try {
       await updateProgress("Kanäle", "Erstelle #" + channelName + " (" + (completedChannels + 1) + "/" + totalChannels + ")", 60 + Math.round(38 * completedChannels / Math.max(1, totalChannels)));
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
@@ -174,8 +189,6 @@ async function applyServerPlan(guild, plan, options = {}) {
       if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
       const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
-      completedChannels++;
-      await updateProgress("Kanäle", "Erstellt: " + completedChannels + "/" + totalChannels, 60 + Math.round(38 * completedChannels / Math.max(1, totalChannels)));
 
       if (/regeln/.test(channelName) && type === ChannelType.GuildText) {
         const rulesEmbed = new EmbedBuilder()
@@ -227,6 +240,14 @@ async function applyServerPlan(guild, plan, options = {}) {
             .setEmoji("🎫")
         );
         await createdChannel.send({ embeds: [embed], components: [row] });
+      }
+      } catch (error) {
+        created.failedItems++;
+        created.errors.push("Kanal " + channelName + ": " + String(error.message || error));
+        console.error("[SERVER-BUILD] Kanal fehlgeschlagen:", channelName, error);
+      } finally {
+        completedChannels++;
+        await updateProgress("Kanäle", "Verarbeitet: " + completedChannels + "/" + totalChannels, 60 + Math.round(38 * completedChannels / Math.max(1, totalChannels)));
       }
     }
   }
