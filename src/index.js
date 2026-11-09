@@ -146,6 +146,12 @@ client.once("clientReady", async () => {
 
 client.on("interactionCreate", async interaction => {
   try {
+  // Slash-Befehle VOR jeder weiteren Verarbeitung bestätigen.
+  // Discord verwirft Interaktionen nach ca. 3 Sekunden mit Fehler 10062.
+  if (interaction.isChatInputCommand() && interaction.inGuild() &&
+      !interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  }
   if (await handleApplicationInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
@@ -240,9 +246,7 @@ client.on("interactionCreate", async interaction => {
   }
   if (interaction.isChatInputCommand()) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", flags: MessageFlags.Ephemeral });
-    // Jede Slash-Interaktion sofort bestätigen. Lange Discord-API-Aufrufe dürfen
-    // nicht das 3-Sekunden-Interaktionsfenster überschreiten.
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    // Die Interaktion wurde bereits ganz am Anfang des Handlers bestätigt.
 
     // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
     // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
