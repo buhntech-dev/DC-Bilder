@@ -14,7 +14,7 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 
 ## Railway
 - Build Command: `npm install`
-- Start Command: `npm run register && npm start`
+- Start Command: `npm start`\n- Pre-deploy Command: `npm run check && npm run register`
 - Node-Version: 26.x (wird über `.node-version` festgelegt)
 
 ## Umgebungsvariablen
