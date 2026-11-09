@@ -33,6 +33,7 @@ In Railway unter Variables setzen:
 - `OWNER_ID`: Discord-Benutzer-ID des Bot-Besitzers
 - optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll
 - optional `MINECRAFT_ADDRESS`: Minecraft-Adresse für Statusabfragen (Standard: `Communety.aternos.me:18884`)
+- optional `RCON_HOST`, `RCON_PORT`, `RCON_PASSWORD`: nur für Server mit aktivierter RCON-Schnittstelle; Passwort ausschließlich als Railway-Variable setzen
 
 **Wichtig:** Keine echten Tokens in GitHub-Dateien speichern. Wenn ein Token versehentlich veröffentlicht wurde, im Discord Developer Portal zurücksetzen und Railway aktualisieren.
 
@@ -57,6 +58,6 @@ npm run check
 - `/website` erzeugt eine HTML-Datei. Sie wird nicht automatisch öffentlich gehostet.
 - Backups liegen als JSON-Dateianhang im privaten Kanal `#backup-archiv`. Sie sichern Rollen und Kanalstruktur, nicht Chatverläufe oder Mitgliedsrollen. Wiederherstellung legt fehlende Rollen/Kanäle neu an und löscht oder überschreibt keine vorhandenen Elemente.
 - `/profimine` und `/minecraft` ersetzen nach doppelter Bestätigung vorhandene löschbare Kanäle und Rollen. System-, Integrations- und Bot-Rollen bleiben erhalten.
-- Whitelist-Annahmen ändern den Discord-Nickname und vergeben die Discord-Rolle. Eine externe Aternos-Whitelist wird nicht automatisch geändert.
+- Whitelist-Annahmen ändern den Discord-Nickname und vergeben die Discord-Rolle. Eine externe Aternos-Whitelist wird nur dann automatisch geändert, wenn der Minecraft-Server RCON unterstützt und `RCON_PASSWORD` konfiguriert ist; andernfalls ist die Eintragung im Serverpanel manuell erforderlich.
 - Die Website und Serverlayouts verwenden Beispielangaben. Prüfe insbesondere die Minecraft-Adresse vor der Veröffentlichung.
 - Der Bot kann keinen neuen Discord-Server in deinem Account anlegen; er richtet einen Server ein, auf dem er bereits eingeladen ist.
