@@ -198,7 +198,7 @@ client.on("interactionCreate", async interaction => {
         }
         await sendLog(guild, "🧹 Server-Leerung abgeschlossen. Gelöschte Kanäle: " + deletedChannels + ", gelöschte Rollen: " + deletedRoles + ".");
         return interaction.followUp({
-          content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Der Bot-Befehle-Kanal sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
+          content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Sicherheitsbackup-ID: **" + safetyBackup.messageId + "**. Der Bot-Befehle-Kanal, das Backup-Archiv sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
           flags: MessageFlags.Ephemeral
         });
       } catch (error) {
