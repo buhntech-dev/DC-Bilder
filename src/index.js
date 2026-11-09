@@ -199,7 +199,7 @@ client.on("interactionCreate", async interaction => {
     return;
   }
   if (interaction.isChatInputCommand()) {
-    if (!interaction.inGuild()) return interaction.editReply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
+    if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
     // Jede Slash-Interaktion sofort bestätigen. Lange Discord-API-Aufrufe dürfen
     // nicht das 3-Sekunden-Interaktionsfenster überschreiten.
     await interaction.deferReply({ ephemeral: true });
@@ -327,8 +327,8 @@ client.on("interactionCreate", async interaction => {
       } catch (error) {
         console.error("Fehler bei /" + interaction.commandName + ":", error);
         const message = "Fehler: " + String(error.message || error).slice(0, 500);
-        if (interaction.deferred || interaction.replied) return interaction.followUp({ content: message, ephemeral: true });
-        return interaction.editReply({ content: message, ephemeral: true });
+        if (interaction.deferred || interaction.replied) return interaction.editReply({ content: message });
+        return interaction.reply({ content: message, ephemeral: true });
       }
     }
     try {
@@ -358,6 +358,7 @@ client.on("interactionCreate", async interaction => {
       console.error(error);
       return interaction.editReply(`Fehler beim Erstellen des Plans: ${String(error.message || error).slice(0, 800)}`);
     }
+    return interaction.editReply("Dieser Befehl ist registriert, aber in dieser Bot-Version nicht implementiert.");
   }
 
   if (interaction.isButton() && interaction.customId === "minecraft_verify_member") {
@@ -458,7 +459,7 @@ client.on("interactionCreate", async interaction => {
     const message = "❌ Der Befehl konnte nicht ausgeführt werden: " + String(error?.message || error).slice(0, 500);
     try {
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: message, ephemeral: true });
+        await interaction.editReply({ content: message });
       } else if (interaction.isRepliable()) {
         await interaction.reply({ content: message, ephemeral: true });
       }
