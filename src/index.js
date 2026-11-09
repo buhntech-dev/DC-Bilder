@@ -23,7 +23,7 @@ const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
 if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
 }
-const client = new Client({ intents, rest: { timeout: 20000 } });
+const client = new Client({ intents, rest: { timeout: 60000 } });
 const pendingPlans = new Map();
 
 function isOwner(interaction) {
