@@ -6,7 +6,7 @@ const { buildWebsiteHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
-const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");\nconst { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");\nconst { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");\nconst { createSupportChime } = require("../src/support-voice");
 
 let passed = 0;
 async function test(name, fn) {
@@ -218,6 +218,18 @@ async function test(name, fn) {
     assert.equal(snapshot.format, "discord-server-builder-backup-v1");
     assert.equal(snapshot.roles.length, 1);
     assert.equal(snapshot.roles[0].permissions, "8");
+  });
+\n
+  await test("Support-Signalton wird als PCM-Audio erzeugt", () => {
+    const audio = createSupportChime();
+    assert.ok(Buffer.isBuffer(audio));
+    assert.ok(audio.length > 48000);
+    assert.equal(audio.length % 4, 0);
+  });
+  await test("Support-Signalton hat Stereo-PCM-Samples", () => {
+    const audio = createSupportChime();
+    assert.notEqual(audio.readInt16LE(0), 0);
+    assert.equal(audio.readInt16LE(0), audio.readInt16LE(2));
   });
 \n  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
