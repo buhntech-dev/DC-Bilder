@@ -22,4 +22,4 @@ jobs:
       - name: Abhängigkeiten installieren
         run: npm ci
       - name: Syntax-, Preset-, Mock- und Featuretests
-        run: npm run check
+        run: npm test
