@@ -1,7 +1,8 @@
 const {
   joinVoiceChannel, VoiceConnectionStatus, entersState, getVoiceConnection,
-  createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, NoSubscriberBehavior, ChannelType, PermissionFlagsBits
+  createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, NoSubscriberBehavior
 } = require("@discordjs/voice");
+const { ChannelType, PermissionFlagsBits } = require("discord.js");
 const { Readable } = require("node:stream");
 
 function createSupportChime(sampleRate = 48000) {
@@ -17,7 +18,6 @@ function createSupportChime(sampleRate = 48000) {
   for (const tone of tones) {
     const count = Math.floor(tone.duration * sampleRate);
     for (let i = 0; i < count; i++) {
-      const progress = i / count;
       const fade = Math.min(1, i / 500, (count - i) / 900);
       const value = Math.round(Math.sin(2 * Math.PI * tone.frequency * i / sampleRate) * 5200 * fade);
       pcm.writeInt16LE(value, offset);
@@ -100,7 +100,15 @@ async function joinSupportVoice(client, guild) {
   if (!channel || !channel.isVoiceBased()) {
     channel = await ensureSupportVoiceChannel(guild, botMember);
   }
-  const permissions = channel.permissionsFor(botMember);
+  let permissions = channel.permissionsFor(botMember);
+  if (!permissions?.has(["ViewChannel", "Connect", "Speak"]) &&
+      (botMember.permissions.has(PermissionFlagsBits.ManageChannels) ||
+       botMember.permissions.has(PermissionFlagsBits.Administrator))) {
+    await channel.permissionOverwrites.edit(botMember.id, {
+      ViewChannel: true, Connect: true, Speak: true, UseVAD: true
+    }, { reason: "Bot-Zugriff auf Support-Sprachkanal sicherstellen" });
+    permissions = channel.permissionsFor(botMember);
+  }
   if (!permissions?.has(["ViewChannel", "Connect", "Speak"])) {
     throw new Error(`Dem Bot fehlen Kanal ansehen, Verbinden oder Sprechen in #${channel.name}.`);
   }
