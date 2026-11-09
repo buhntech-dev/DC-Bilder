@@ -178,12 +178,13 @@ async function applyServerPlan(guild, plan, options = {}) {
       // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
       const createdRole = await guild.roles.create({
         name,
-        color: parseInt(validColor(role.color).slice(1), 16),
+        colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) },
         hoist: Boolean(role.hoist),
         mentionable: Boolean(role.mentionable),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       });
       console.log("[SERVER-BUILD] Rolle erstellt:", name, createdRole.id);
+      throwIfBuildAborted(options.signal);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
