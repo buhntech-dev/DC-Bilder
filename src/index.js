@@ -94,7 +94,7 @@ async function openTicket(interaction) {
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
   const existing = interaction.guild.channels.cache.find(ch => ch.topic === "ticket-owner:" + interaction.user.id);
   if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
-  const supportRoles = interaction.guild.roles.cache.filter(role => ["Supporter", "Moderator", "Administrator", "Management", "Owner"].includes(role.name));
+  const supportRoles = interaction.guild.roles.cache.filter(role => ["Test Support", "Supporter", "Senior Supporter", "Moderator", "Senior Moderator", "Administrator", "Senior Administrator", "Management", "Owner"].includes(role.name));
   const overwrites = [
     { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
@@ -176,7 +176,7 @@ client.on("interactionCreate", async interaction => {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
-      const authorized = member.permissions.has(PermissionFlagsBits.Administrator) || ["Owner", "Management", "Administrator"].some(name => member.roles.cache.some(role => role.name === name));
+      const authorized = member.permissions.has(PermissionFlagsBits.Administrator) || ["Owner", "Management", "Administrator", "Senior Administrator"].some(name => member.roles.cache.some(role => role.name === name));
       if (!authorized) return interaction.editReply("Nur Owner, Management und Administratoren können ihren Dienststatus ändern.");
       const onRole = interaction.guild.roles.cache.find(role => role.name === "Admin im Dienst");
       const offRole = interaction.guild.roles.cache.find(role => role.name === "Admin außer Dienst");
