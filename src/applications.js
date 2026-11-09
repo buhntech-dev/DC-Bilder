@@ -1,7 +1,8 @@
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags,
   ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits
-} = require("discord.js");\nconst { registerPlayer, findRegisteredPlayer } = require("./player-registry");
+} = require("discord.js");
+const { registerPlayer, findRegisteredPlayer } = require("./player-registry");
 
 function textChannel(guild, candidates) {
   const names = new Set(candidates.map(name => name.toLowerCase()));
