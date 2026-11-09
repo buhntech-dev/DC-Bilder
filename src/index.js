@@ -26,7 +26,7 @@ if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true"
 const client = new Client({ intents, rest: { timeout: 60000 } });
 const pendingPlans = new Map();
 
-console.log("[BOT-BUILD] Minecraft builder fix 2026-11-09");
+console.log("[BOT-BUILD] Builder hardening 2026-11-09 – preflight, no progress channel");
 
 function isOwner(interaction) {
   return interaction.user.id === process.env.OWNER_ID ||
@@ -238,7 +238,9 @@ client.on("interactionCreate", async interaction => {
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
         return interaction.editReply({
-          content: interaction.commandName === "profimine" ? "Prüfe ProfiMine Ultimate. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung." : "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.",
+          content: interaction.commandName === "profimine"
+            ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
+            : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
           embeds: [planEmbed(plan, true)], components: [row]
         });
       } catch (error) {
