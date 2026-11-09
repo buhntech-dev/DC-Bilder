@@ -134,6 +134,7 @@ async function handleApplicationInteraction(interaction) {
     }
     const embed = interaction.message.embeds[0];
     const minecraftName = embed?.fields?.find(field => field.name === "Minecraft-Name")?.value;
+    let resultNote = "";
     if (action === "interview" && kind === "application") {
       await applicant.send("📞 Das Team möchte ein Bewerbungsgespräch mit dir führen. Bitte melde dich im Discord oder eröffne ein Ticket, damit wir einen Termin vereinbaren können.").catch(() => {});
       await interaction.editReply("📩 Einladung zum Bewerbungsgespräch wurde versendet (falls Direktnachrichten möglich sind).");
@@ -153,9 +154,19 @@ async function handleApplicationInteraction(interaction) {
         await interaction.editReply("Die Rolle Mitglied oder der Minecraft-Name fehlt. Bitte prüfe die Anfrage.");
         return true;
       }
-      await applicant.setNickname(minecraftName, "Minecraft-Whitelist angenommen");
+      const botMember = await interaction.guild.members.fetchMe();
+      if (botMember.permissions.has(PermissionFlagsBits.Administrator) ||
+          botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+        try {
+          await applicant.setNickname(minecraftName, "Minecraft-Whitelist angenommen");
+        } catch (error) {
+          resultNote = " Die Mitglied-Rolle wurde vergeben, aber der Discord-Name konnte nicht geändert werden: " + String(error.message || error).slice(0, 180);
+        }
+      } else {
+        resultNote = " Die Mitglied-Rolle wurde vergeben, aber dem Bot fehlt die Berechtigung Nicknames verwalten.";
+      }
       await applicant.roles.add(memberRole, "Minecraft-Whitelist angenommen");
-      await applicant.send("✅ Deine Whitelist-Anfrage wurde angenommen. Dein Discord-Name wurde auf **" + minecraftName + "** gesetzt.").catch(() => {});
+      await applicant.send("✅ Deine Whitelist-Anfrage wurde angenommen." + (resultNote ? " Dein Discord-Name konnte eventuell nicht automatisch geändert werden." : " Dein Discord-Name wurde auf **" + minecraftName + "** gesetzt.")).catch(() => {});
     } else {
       await applicant.send("Deine " + (kind === "application" ? "Team-Bewerbung" : "Whitelist-Anfrage") + " wurde leider abgelehnt. Bei Fragen wende dich bitte an das Team.").catch(() => {});
     }
@@ -166,7 +177,7 @@ async function handleApplicationInteraction(interaction) {
       new ActionRowBuilder().addComponents(row.components.map(component => ButtonBuilder.from(component).setDisabled(true)))
     );
     await interaction.message.edit({ embeds: [updated], components: disabledRows });
-    await interaction.editReply(action === "accept" ? "✅ Antrag angenommen." : "Antrag abgelehnt.");
+    await interaction.editReply((action === "accept" ? "✅ Antrag angenommen." : "Antrag abgelehnt.") + resultNote);
     return true;
   }
 
