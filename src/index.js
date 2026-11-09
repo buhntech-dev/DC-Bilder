@@ -458,7 +458,12 @@ client.on("interactionCreate", async interaction => {
     });
 
     try {
-      const result = await applyServerPlan(interaction.guild, entry.plan, { replaceServer: entry.replaceServer, ownerId: interaction.user.id, keepChannelId: interaction.channelId });
+      const result = await applyServerPlan(interaction.guild, entry.plan, {
+        replaceServer: entry.replaceServer,
+        ownerId: interaction.user.id,
+        keepChannelId: interaction.channelId,
+        onProgress: message => interaction.editReply({ content: message })
+      });
       const dutyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🟢・admin-dienst" || ch.name === "admin-dienst");
       if (dutyChannel && dutyChannel.isTextBased()) {
         const recent = await dutyChannel.messages.fetch({ limit: 30 }).catch(() => null);
