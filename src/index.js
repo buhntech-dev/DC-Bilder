@@ -1,6 +1,6 @@
 require("dotenv").config();
 const {
-  Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, EmbedBuilder,
+  Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
@@ -87,7 +87,7 @@ function hasPermission(interaction, permission) {
   return interaction.memberPermissions?.has(permission) || isOwner(interaction);
 }
 async function openTicket(interaction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
   const existing = interaction.guild.channels.cache.find(ch => ch.topic === "ticket-owner:" + interaction.user.id);
   if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
@@ -111,7 +111,7 @@ async function openTicket(interaction) {
   return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
 }
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
   for (const guild of client.guilds.cache.values()) {
     try { await joinSupportVoice(client, guild); }
@@ -124,7 +124,7 @@ client.on("interactionCreate", async interaction => {
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
     const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
-      return interaction.reply({ content: "Nur der konfigurierte Serverinhaber darf das ausführen.", ephemeral: true });
+      return interaction.reply({ content: "Nur der konfigurierte Serverinhaber darf das ausführen.", flags: MessageFlags.Ephemeral });
     }
     if (action === "serverwipe_cancel") {
       return interaction.update({ content: "Abgebrochen. Dein Server bleibt unverändert.", components: [] });
@@ -158,17 +158,17 @@ client.on("interactionCreate", async interaction => {
         await sendLog(guild, "🧹 Server-Leerung abgeschlossen. Gelöschte Kanäle: " + deletedChannels + ", gelöschte Rollen: " + deletedRoles + ".");
         return interaction.followUp({
           content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Der Bot-Befehle-Kanal sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       } catch (error) {
         console.error("Server-Leerung fehlgeschlagen:", error);
-        return interaction.followUp({ content: "Server-Leerung fehlgeschlagen: " + String(error.message || error).slice(0, 500), ephemeral: true });
+        return interaction.followUp({ content: "Server-Leerung fehlgeschlagen: " + String(error.message || error).slice(0, 500), flags: MessageFlags.Ephemeral });
       }
     }
   }
 
   if (interaction.isButton() && (interaction.customId === "admin_duty_on" || interaction.customId === "admin_duty_off")) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const authorized = member.permissions.has(PermissionFlagsBits.Administrator) || ["Owner", "Management", "Administrator"].some(name => member.roles.cache.some(role => role.name === name));
@@ -197,14 +197,14 @@ client.on("interactionCreate", async interaction => {
       console.error("Ticket konnte nicht geöffnet werden:", error);
       const message = "Ticket konnte nicht erstellt werden. Prüfe die Bot-Berechtigung Kanäle verwalten.";
       if (interaction.deferred || interaction.replied) return interaction.editReply(message);
-      return interaction.reply({ content: message, ephemeral: true });
+      return interaction.reply({ content: message });
     }
   }
   if (interaction.isButton() && interaction.customId === "ticket_close") {
     const match = interaction.channel?.topic?.match(/ticket-owner:(\d+)/);
     const ownerId = match && match[1];
     if (!hasPermission(interaction, PermissionFlagsBits.ManageChannels) && ownerId !== interaction.user.id) {
-      return interaction.reply({ content: "Nur Ticket-Ersteller oder Team dürfen schließen.", ephemeral: true });
+      return interaction.reply({ content: "Nur Ticket-Ersteller oder Team dürfen schließen.", flags: MessageFlags.Ephemeral });
     }
     await interaction.reply({ content: "🔒 Ticket wird geschlossen und in 5 Sekunden gelöscht." });
     await sendLog(interaction.guild, "🔒 Ticket " + interaction.channel.name + " wurde von " + interaction.user.tag + " geschlossen.");
@@ -212,10 +212,10 @@ client.on("interactionCreate", async interaction => {
     return;
   }
   if (interaction.isChatInputCommand()) {
-    if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
+    if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", flags: MessageFlags.Ephemeral });
     // Jede Slash-Interaktion sofort bestätigen. Lange Discord-API-Aufrufe dürfen
     // nicht das 3-Sekunden-Interaktionsfenster überschreiten.
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
     // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
@@ -246,7 +246,7 @@ client.on("interactionCreate", async interaction => {
     }
 
     const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren"].includes(interaction.commandName);
-    if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
+    if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen." });
     if (interaction.commandName === "website") {
       try {
         const html = buildWebsiteHtml(interaction.guild.name);
@@ -267,7 +267,7 @@ client.on("interactionCreate", async interaction => {
       );
       return interaction.editReply({
         content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Ein Kanal namens **#bot-commands**, **#bot-befehle** oder **#botcommands** bleibt erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
-        components: [row], ephemeral: true
+        components: [row]
       });
     }
 
@@ -279,7 +279,7 @@ client.on("interactionCreate", async interaction => {
       ticketpanel: PermissionFlagsBits.ManageChannels
     };
     const needed = permissions[interaction.commandName];
-    if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung.", ephemeral: true });
+    if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung." });
     if (!ownerOnly) {
       try {
         const cmd = interaction.commandName;
@@ -287,22 +287,22 @@ client.on("interactionCreate", async interaction => {
           const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Klicke auf Ticket erstellen. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
           const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket_open").setLabel("Ticket erstellen").setStyle(ButtonStyle.Success).setEmoji("🎫"));
           await interaction.channel.send({ embeds: [embed], components: [row] });
-          return interaction.editReply({ content: "Support-Panel wurde veröffentlicht.", ephemeral: true });
+          return interaction.editReply({ content: "Support-Panel wurde veröffentlicht." });
         }
         if (cmd === "clear") {
           const amount = interaction.options.getInteger("anzahl", true);
           const deleted = await interaction.channel.bulkDelete(amount, true);
-          await interaction.editReply({ content: "🧹 " + deleted.size + " Nachrichten gelöscht. Ältere Nachrichten kann Discord nicht gesammelt löschen.", ephemeral: true });
+          await interaction.editReply({ content: "🧹 " + deleted.size + " Nachrichten gelöscht. Ältere Nachrichten kann Discord nicht gesammelt löschen." });
           await sendLog(interaction.guild, interaction.user.tag + " löschte " + deleted.size + " Nachrichten in #" + interaction.channel.name + ".");
           return;
         }
         if (cmd === "kick" || cmd === "ban") {
           const target = interaction.options.getMember("mitglied");
           const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
-          if (!target) return interaction.editReply({ content: "Mitglied nicht gefunden.", ephemeral: true });
-          if (target.id === interaction.user.id || target.id === interaction.guild.ownerId || (cmd === "kick" && !target.kickable) || (cmd === "ban" && !target.bannable)) return interaction.editReply({ content: "Dieses Mitglied kann wegen der Rollen-Hierarchie nicht moderiert werden.", ephemeral: true });
+          if (!target) return interaction.editReply({ content: "Mitglied nicht gefunden." });
+          if (target.id === interaction.user.id || target.id === interaction.guild.ownerId || (cmd === "kick" && !target.kickable) || (cmd === "ban" && !target.bannable)) return interaction.editReply({ content: "Dieses Mitglied kann wegen der Rollen-Hierarchie nicht moderiert werden." });
           if (cmd === "kick") await target.kick(reason); else await target.ban({ reason });
-          await interaction.editReply({ content: "✅ " + target.user.tag + " wurde " + (cmd === "kick" ? "gekickt" : "gebannt") + ". Grund: " + reason, ephemeral: true });
+          await interaction.editReply({ content: "✅ " + target.user.tag + " wurde " + (cmd === "kick" ? "gekickt" : "gebannt") + ". Grund: " + reason });
           await sendLog(interaction.guild, interaction.user.tag + " hat " + target.user.tag + " moderiert. Grund: " + reason);
           return;
         }
@@ -310,16 +310,16 @@ client.on("interactionCreate", async interaction => {
           const target = interaction.options.getMember("mitglied");
           const minutes = interaction.options.getInteger("minuten", true);
           const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
-          if (!target || !target.moderatable || target.id === interaction.user.id) return interaction.editReply({ content: "Dieses Mitglied kann nicht stummgeschaltet werden.", ephemeral: true });
+          if (!target || !target.moderatable || target.id === interaction.user.id) return interaction.editReply({ content: "Dieses Mitglied kann nicht stummgeschaltet werden." });
           await target.timeout(minutes * 60000, reason);
-          await interaction.editReply({ content: "⏳ Timeout für " + target.user.tag + ": " + minutes + " Minuten.", ephemeral: true });
+          await interaction.editReply({ content: "⏳ Timeout für " + target.user.tag + ": " + minutes + " Minuten." });
           await sendLog(interaction.guild, interaction.user.tag + " gab " + target.user.tag + " " + minutes + " Minuten Timeout. Grund: " + reason);
           return;
         }
         if (cmd === "announce") {
           const text = interaction.options.getString("text", true);
           await interaction.channel.send({ embeds: [new EmbedBuilder().setColor(0xF1C40F).setTitle("📢 Ankündigung").setDescription(text).setFooter({ text: "Von " + interaction.user.tag }).setTimestamp()] });
-          return interaction.editReply({ content: "Ankündigung wurde veröffentlicht.", ephemeral: true });
+          return interaction.editReply({ content: "Ankündigung wurde veröffentlicht." });
         }
         if (cmd === "lock" || cmd === "unlock") {
           await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: cmd === "lock" ? false : null });
@@ -339,13 +339,13 @@ client.on("interactionCreate", async interaction => {
               { name: "Rollen", value: String(g.roles.cache.size), inline: true },
               { name: "Erstellt", value: "<t:" + Math.floor(g.createdTimestamp / 1000) + ":D>", inline: true }
             ).setThumbnail(g.iconURL());
-          return interaction.editReply({ embeds: [embed], ephemeral: true });
+          return interaction.editReply({ embeds: [embed] });
         }
       } catch (error) {
         console.error("Fehler bei /" + interaction.commandName + ":", error);
         const message = "Fehler: " + String(error.message || error).slice(0, 500);
         if (interaction.deferred || interaction.replied) return interaction.editReply({ content: message });
-        return interaction.reply({ content: message, ephemeral: true });
+        return interaction.reply({ content: message });
       }
     }
     try {
@@ -382,7 +382,7 @@ client.on("interactionCreate", async interaction => {
   }
 
   if (interaction.isButton() && interaction.customId === "minecraft_verify_member") {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const memberRole = interaction.guild.roles.cache.find(role => role.name === "Mitglied");
@@ -404,13 +404,13 @@ client.on("interactionCreate", async interaction => {
   if (interaction.isButton()) {
     const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
-      return interaction.reply({ content: "Diese Schaltfläche gehört nicht zu dir.", ephemeral: true });
+      return interaction.reply({ content: "Diese Schaltfläche gehört nicht zu dir.", flags: MessageFlags.Ephemeral });
     }
     const key = `${interaction.guildId}:${interaction.user.id}`;
     const entry = pendingPlans.get(key);
     if (!entry || Date.now() - entry.createdAt > 15 * 60 * 1000) {
       pendingPlans.delete(key);
-      return interaction.reply({ content: "Der Plan ist abgelaufen. Bitte starte den Befehl erneut.", ephemeral: true });
+      return interaction.reply({ content: "Der Plan ist abgelaufen. Bitte starte den Befehl erneut.", flags: MessageFlags.Ephemeral });
     }
 
     if (action === "cancel") {
@@ -434,7 +434,7 @@ client.on("interactionCreate", async interaction => {
 
     if (action !== "apply" && action !== "finalreplace") return;
     if (action === "finalreplace" && !entry.replaceServer) {
-      return interaction.reply({ content: "Ungültige Bestätigung.", ephemeral: true });
+      return interaction.reply({ content: "Ungültige Bestätigung.", flags: MessageFlags.Ephemeral });
     }
 
     pendingPlans.delete(key);
@@ -464,13 +464,13 @@ client.on("interactionCreate", async interaction => {
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
         content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nGelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\nDer Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     } catch (error) {
       console.error(error);
       await interaction.followUp({
         content: `Beim Erstellen ist ein Fehler aufgetreten: ${String(error.message || error).slice(0, 800)}. Bereits gelöschte/erstellte Elemente werden nicht automatisch zurückgesetzt.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -481,7 +481,7 @@ client.on("interactionCreate", async interaction => {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ content: message });
       } else if (interaction.isRepliable()) {
-        await interaction.reply({ content: message, ephemeral: true });
+        await interaction.reply({ content: message });
       }
     } catch (replyError) {
       console.error("Fehler beim Senden der Discord-Fehlermeldung:", replyError.message);
