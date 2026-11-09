@@ -100,9 +100,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       created.failedItems++;
       created.errors.push("Rolle " + name + ": " + String(error.message || error));
       console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
-    }
-    completedRoles++;
-  }
+    }}
 
   // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
   const positions = createdRoleList
@@ -218,9 +216,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         created.failedItems++;
         created.errors.push("Kanal " + channelName + ": " + String(error.message || error));
         console.error("[SERVER-BUILD] Kanal fehlgeschlagen:", channelName, error);
-      } finally {
-        completedChannels++;
-      }
+      } finally {}
     }
   }
   return created;
