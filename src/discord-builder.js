@@ -12,7 +12,7 @@ function resetActiveBuilds() {
 
 function throwIfBuildAborted(signal) {
   if (signal?.aborted) {
-    const error = new Error("Serveraufbau wurde wegen eines Bot-Neustarts oder Shutdowns abgebrochen. Bereits erstellte oder gelöschte Elemente bleiben bestehen.");
+    const error = new Error("Dieser Serveraufbau wurde durch einen neu gestarteten Aufbau abgebrochen. Bereits erstellte oder gelöschte Elemente bleiben bestehen.");
     error.code = "BUILD_ABORTED";
     throw error;
   }
@@ -100,7 +100,6 @@ async function applyServerPlan(guild, plan, options = {}) {
     if (options.signal.aborted) controller.abort();
     else options.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
-  throwIfBuildAborted(buildSignal);
   const createdRoles = new Map();
   const created = {
     roles: 0, categories: 0, channels: 0,
@@ -109,6 +108,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   };
 
   try {
+  throwIfBuildAborted(buildSignal);
   // Rechte und Discord-Limits vor jeder Löschung prüfen.
   const botMemberForCheck = await guild.members.fetchMe();
   const missing = [];
