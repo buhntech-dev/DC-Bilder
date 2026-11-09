@@ -104,3 +104,8 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
   console.error("Builder-Integrationstest fehlgeschlagen:", error);
   process.exitCode = 1;
 });
+
+const qualityTests = spawnSync(process.execPath, [path.join(__dirname, "quality-tests.js")], { encoding: "utf8" });
+if (qualityTests.stdout) process.stdout.write(qualityTests.stdout);
+if (qualityTests.stderr) process.stderr.write(qualityTests.stderr);
+if (qualityTests.status !== 0) process.exitCode = 1;
