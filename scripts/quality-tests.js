@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
 const { createServerPlan } = require("../src/ai");
-const { buildWebsiteHtml } = require("../src/website");
+const { buildWebsiteHtml, escapeHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
@@ -303,6 +303,16 @@ async function test(name, fn) {
     const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
     assert.ok(commandsSource.includes('setName("spieler-eintragen")'));
     assert.ok(commandsSource.includes('setName("spieler-suchen")'));
+  });
+
+
+  await test("Website escaped HTML-Sonderzeichen sicher", () => assert.equal(escapeHtml('<script a="b">&'), "&lt;script a=&quot;b&quot;&gt;&amp;"));
+  await test("Website verwendet konfigurierte Serveradresse", () => assert.ok(buildWebsiteHtml("Test", { address: "play.example.net:25565" }).includes("play.example.net:25565")));
+  await test("Website akzeptiert nur Discord-Einladungslinks", () => {
+    const safe = buildWebsiteHtml("Test", { discordInvite: "https://discord.gg/example" });
+    const unsafe = buildWebsiteHtml("Test", { discordInvite: "javascript:alert(1)" });
+    assert.ok(safe.includes('href="https://discord.gg/example"'));
+    assert.ok(!unsafe.includes('href="javascript:'));
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
