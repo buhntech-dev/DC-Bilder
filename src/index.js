@@ -26,6 +26,8 @@ if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true"
 const client = new Client({ intents, rest: { timeout: 60000 } });
 const pendingPlans = new Map();
 
+console.log("[BOT-BUILD] Minecraft builder fix 2026-11-09");
+
 function isOwner(interaction) {
   return interaction.user.id === process.env.OWNER_ID ||
     interaction.guild?.ownerId === interaction.user.id;
