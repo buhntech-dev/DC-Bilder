@@ -13,6 +13,7 @@ const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DE
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
 const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
 const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
+const { createProgressChannel, createProgressUpdater } = require("./progress-channel");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -571,16 +572,28 @@ client.on("interactionCreate", async interaction => {
       embeds: [], components: []
     });
 
+    let progressChannel = null;
+    let progressUpdater = null;
     try {
       const safetyBackup = entry.replaceServer
         ? await createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")
         : null;
+      try {
+        const progress = await createProgressChannel(interaction.guild, interaction.user.id, client.user.id);
+        progressChannel = progress.channel;
+        progressUpdater = createProgressUpdater(interaction, progress.message);
+      } catch (progressError) {
+        console.warn("[PROGRESS] Temporärer Fortschrittskanal konnte nicht erstellt werden:", progressError.message);
+      }
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
         ownerId: interaction.user.id,
-        keepChannelId: interaction.channelId,
+        keepChannelId: progressChannel?.id || interaction.channelId,
         signal: buildAbortController.signal,
-        onProgress: message => interaction.editReply({ content: message })
+        onProgress: message => {
+          if (progressUpdater) progressUpdater.update(message);
+          else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
+        }
       });
       const dutyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🟢・admin-dienst" || ch.name === "admin-dienst");
       if (dutyChannel && dutyChannel.isTextBased()) {
@@ -607,6 +620,13 @@ client.on("interactionCreate", async interaction => {
         content: `Beim Erstellen ist ein Fehler aufgetreten: ${String(error.message || error).slice(0, 800)}. Bereits gelöschte/erstellte Elemente werden nicht automatisch zurückgesetzt.`,
         flags: MessageFlags.Ephemeral
       });
+    } finally {
+      if (progressUpdater) await progressUpdater.stop().catch(() => {});
+      if (progressChannel) {
+        await progressChannel.delete("Temporärer Fortschrittskanal automatisch entfernt").catch(error => {
+          console.warn("[PROGRESS] Fortschrittskanal konnte nicht gelöscht werden:", error.message);
+        });
+      }
     }
   }
   } catch (error) {

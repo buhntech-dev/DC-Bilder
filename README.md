@@ -10,6 +10,7 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 - `/build prompt`: kostenloser regelbasierter Planer für weitere Serverideen
 - `/plan prompt`: zeigt nur einen Plan, ohne Änderungen
 - `/website`: erstellt eine responsive HTML-Website als Datei im aktuellen Kanal
+- Bei einem Serveraufbau wird ein privater temporärer Kanal `#fortschritt` angezeigt und nach Abschluss automatisch und ohne zusätzliche Nachricht gelöscht
 - `/ticketpanel`, `/bewerbung-panel`, `/whitelist-panel`, `/clear`, `/kick`, `/ban`, `/timeout`, `/announce`, `/lock`, `/unlock`, `/slowmode`, `/serverinfo`, `/server-leeren`
 - Team-Bewerbungen mit Formular, Annahme/Ablehnung und automatischer Rolle `Test Support`
 - Team-Beförderungen über `/beforderung` mit Freigabe durch Owner, Management oder Teamleitung und Rangfolge bis Senior Administrator

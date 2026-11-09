@@ -10,6 +10,7 @@ const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createProm
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { searchRegisteredPlayers } = require("../src/player-registry");
 const { createSupportChime, buildSupportVoiceOverwrites, ensureSupportVoiceChannel } = require("../src/support-voice");
+const { PROGRESS_TOPIC_PREFIX, buildProgressOverwrites, cleanupStaleProgressChannels, createProgressChannel, createProgressUpdater } = require("../src/progress-channel");
 const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
 const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
 
@@ -475,6 +476,68 @@ async function test(name, fn) {
     } finally {
       encoder.delete();
     }
+  });
+
+
+  await test("Fortschrittskanal bleibt für Außenstehende privat", () => {
+    const overwrites = buildProgressOverwrites({ id: "guild", roles: { everyone: { id: "guild" } } }, "owner", "bot");
+    assert.ok(overwrites.find(item => item.id === "guild").deny.includes(PermissionFlagsBits.ViewChannel));
+    assert.ok(overwrites.find(item => item.id === "owner").allow.includes(PermissionFlagsBits.ViewChannel));
+  });
+  await test("Fortschrittskanal erlaubt dem Bot Nachrichten", () => {
+    const overwrites = buildProgressOverwrites({ id: "guild", roles: { everyone: { id: "guild" } } }, "owner", "bot");
+    assert.ok(overwrites.find(item => item.id === "bot").allow.includes(PermissionFlagsBits.SendMessages));
+  });
+  await test("Fortschrittskanal wird mit temporärem Topic markiert", async () => {
+    const { Collection, ChannelType } = require("discord.js");
+    const channels = new Collection();
+    let options;
+    const guild = {
+      id: "guild", roles: { everyone: { id: "guild" } },
+      channels: {
+        cache: channels,
+        async fetch() { return channels; },
+        async create(value) {
+          options = value;
+          const channel = { id: "progress", ...value, async send(content) { return { content, async edit() {} }; } };
+          channels.set(channel.id, channel);
+          return channel;
+        }
+      }
+    };
+    const result = await createProgressChannel(guild, "owner", "bot");
+    assert.equal(result.channel.name, "fortschritt");
+    assert.ok(result.channel.topic.startsWith(PROGRESS_TOPIC_PREFIX));
+    assert.equal(options.type, ChannelType.GuildText);
+  });
+  await test("Verwaiste Fortschrittskanäle werden bereinigt", async () => {
+    const { Collection, ChannelType } = require("discord.js");
+    let deleted = 0;
+    const stale = { id: "old", name: "fortschritt", topic: PROGRESS_TOPIC_PREFIX + " old", type: ChannelType.GuildText, async delete() { deleted++; } };
+    const normal = { id: "normal", name: "fortschritt", topic: "Benutzerkanal", type: ChannelType.GuildText, async delete() { throw new Error("Darf nicht gelöscht werden"); } };
+    const channels = new Collection([[stale.id, stale], [normal.id, normal]]);
+    const guild = { channels: { cache: channels, async fetch() { return channels; } } };
+    assert.equal(await cleanupStaleProgressChannels(guild), 1);
+    assert.equal(deleted, 1);
+  });
+  await test("Fortschrittsanzeige bündelt Updates ohne den Aufbau zu blockieren", async () => {
+    const edits = [];
+    const updater = createProgressUpdater(
+      { async editReply(payload) { edits.push(payload.content); } },
+      { async edit(payload) { edits.push(payload.content); } },
+      60000
+    );
+    updater.update("Schritt 1");
+    updater.update("Schritt 2");
+    await updater.flush();
+    await updater.stop();
+    assert.ok(edits.length >= 2);
+    assert.ok(edits.every(value => value === "Schritt 2"));
+  });
+  await test("Build löscht Fortschrittskanal nach Abschluss", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes('keepChannelId: progressChannel?.id || interaction.channelId'));
+    assert.ok(source.includes('progressChannel.delete("Temporärer Fortschrittskanal automatisch entfernt")'));
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
