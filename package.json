@@ -1,19 +1,19 @@
 {
   "name": "ai-discord-server-builder",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Kostenloser Discord Server Builder ohne externe KI-API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "register": "node src/register-commands.js"
+    "register": "node src/register-commands.js",
+    "check": "node scripts/check.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24.17.0"
   },
   "dependencies": {
-    "discord.js": "14.19.3",
+    "discord.js": "^14.27.0",
     "dotenv": "16.4.7",
-    "@discordjs/voice": "0.18.0",
-    "play-dl": "1.9.7"
+    "@discordjs/voice": "0.18.0"
   }
 }
