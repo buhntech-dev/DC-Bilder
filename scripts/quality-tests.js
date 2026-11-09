@@ -6,7 +6,7 @@ const { buildWebsiteHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
-const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");\nconst { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");
 
 let passed = 0;
 async function test(name, fn) {
@@ -190,6 +190,34 @@ async function test(name, fn) {
   await test("Normales Mitglied darf keine Beförderungen prüfen", () => {
     const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
     assert.equal(hasTeamLeadAccess(member), false);
+  });
+\n
+  await test("Backup-Wochenkennung berechnet ISO-Woche", () => assert.equal(isoWeekKey({ year: 2026, month: 1, day: 1 }), "2026-W01"));
+  await test("Backup-Wochenkennung verarbeitet Jahreswechsel", () => assert.equal(isoWeekKey({ year: 2025, month: 12, day: 29 }), "2026-W01"));
+  await test("Berlin-Zeitzone berücksichtigt Winterzeit", () => {
+    const parts = berlinParts(new Date("2026-11-09T09:00:00.000Z"));
+    assert.equal(parts.hour, "10");
+    assert.equal(parts.weekday, "Mon");
+  });
+  await test("Berlin-Zeitzone berücksichtigt Sommerzeit", () => {
+    const parts = berlinParts(new Date("2026-07-06T08:00:00.000Z"));
+    assert.equal(parts.hour, "10");
+  });
+  await test("Backup-Archiv zeigt Hinweis bei leerer Liste", () => {
+    const embed = backupListEmbed([]).toJSON();
+    assert.ok(embed.description.includes("/backup"));
+  });
+  await test("Backup-Archiv listet Wiederherstellungs-IDs", () => {
+    const embed = backupListEmbed([{ id: "123456789012345678", createdAt: new Date("2026-01-01T12:00:00Z"), summary: "Minecraft Backup" }]).toJSON();
+    assert.ok(embed.description.includes("123456789012345678"));
+  });
+  await test("Backup-Serialisierung enthält Versionskennung", () => {
+    const roles = { cache: { values: () => [ { id:"g", name:"@everyone", managed:false }, { id:"r", name:"Owner", managed:false, hexColor:"#ff0000", hoist:true, mentionable:false, permissions:{bitfield:8n}, position:2 } ] } };
+    const channels = { cache: { values: () => [] } };
+    const snapshot = serializeGuild({ id:"g", name:"Test", roles, channels });
+    assert.equal(snapshot.format, "discord-server-builder-backup-v1");
+    assert.equal(snapshot.roles.length, 1);
+    assert.equal(snapshot.roles[0].permissions, "8");
   });
 \n  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
