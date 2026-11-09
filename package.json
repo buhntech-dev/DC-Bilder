@@ -1,13 +1,14 @@
 {
   "name": "ai-discord-server-builder",
-  "version": "1.2.0",
-  "description": "Kostenloser Discord Server Builder ohne externe KI-API",
+  "version": "2.0.0",
+  "description": "Kostenloser Discord Server Builder – Rewrite V2",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "register": "node src/register-commands.js",
     "check": "node scripts/check.js",
-    "predeploy": "npm run check && npm run register"
+    "predeploy": "npm run check && npm run register",
+    "test": "npm run check && node --test"
   },
   "engines": {
     "node": ">=24.17.0"

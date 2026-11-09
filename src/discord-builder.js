@@ -1,18 +1,18 @@
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
-const activeBuildGuilds = new Set();
+const activeBuildGuilds = new Map();
 
 // Ein Neustart beendet den bisherigen Node-Prozess und damit alle laufenden Builds.
 // Diese Funktion entfernt zusätzlich verwaiste In-Process-Sperren beim Bot-Start.
 function resetActiveBuilds() {
   const count = activeBuildGuilds.size;
-  activeBuildGuilds.clear();
+  for (const build of activeBuildGuilds.values()) build.controller.abort();
   return count;
 }
 
 function throwIfBuildAborted(signal) {
   if (signal?.aborted) {
-    const error = new Error("Serveraufbau wurde wegen eines Bot-Neustarts oder Shutdowns abgebrochen. Bereits erstellte oder gelöschte Elemente bleiben bestehen.");
+    const error = new Error("Dieser Serveraufbau wurde durch einen neu gestarteten Aufbau abgebrochen. Bereits erstellte oder gelöschte Elemente bleiben bestehen.");
     error.code = "BUILD_ABORTED";
     throw error;
   }
@@ -83,7 +83,23 @@ function validateServerPlan(plan) {
 
 async function applyServerPlan(guild, plan, options = {}) {
   validateServerPlan(plan);
-  throwIfBuildAborted(options.signal);
+  // Einen älteren Aufbau auf demselben Discord stoppen und auslaufen lassen,
+  // bevor der neue Aufbau Discord-Änderungen startet.
+  while (activeBuildGuilds.has(guild.id)) {
+    const previousBuild = activeBuildGuilds.get(guild.id);
+    previousBuild.controller.abort();
+    await previousBuild.done;
+  }
+  const controller = new AbortController();
+  const buildSignal = controller.signal;
+  let finishBuild;
+  const done = new Promise(resolve => { finishBuild = resolve; });
+  const buildRecord = { controller, done };
+  activeBuildGuilds.set(guild.id, buildRecord);
+  if (options.signal) {
+    if (options.signal.aborted) controller.abort();
+    else options.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
   const createdRoles = new Map();
   const created = {
     roles: 0, categories: 0, channels: 0,
@@ -91,10 +107,8 @@ async function applyServerPlan(guild, plan, options = {}) {
     failedItems: 0, errors: []
   };
 
-  if (activeBuildGuilds.has(guild.id)) throw new Error("Auf diesem Discord läuft bereits ein Serveraufbau. Bitte warte, bis er abgeschlossen ist.");
-  activeBuildGuilds.add(guild.id);
-
   try {
+  throwIfBuildAborted(buildSignal);
   // Rechte und Discord-Limits vor jeder Löschung prüfen.
   const botMemberForCheck = await guild.members.fetchMe();
   const missing = [];
@@ -141,7 +155,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
-      throwIfBuildAborted(options.signal);
+      throwIfBuildAborted(buildSignal);
       if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
@@ -166,7 +180,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       );
 
     for (const role of rolesToDelete) {
-      throwIfBuildAborted(options.signal);
+      throwIfBuildAborted(buildSignal);
       try {
         await role.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedRoles++;
@@ -190,7 +204,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   };
   const createdRoleList = [];
   await mapWithConcurrency(plan.roles, 3, async (role, index) => {
-    throwIfBuildAborted(options.signal);
+    throwIfBuildAborted(buildSignal);
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
@@ -206,7 +220,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       });
       console.log("[SERVER-BUILD] Rolle erstellt:", name, createdRole.id);
-      throwIfBuildAborted(options.signal);
+      throwIfBuildAborted(buildSignal);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
@@ -258,7 +272,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   let categoryIndex = 0;
   for (const category of plan.categories) {
-    throwIfBuildAborted(options.signal);
+    throwIfBuildAborted(buildSignal);
     categoryIndex++;
     await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
@@ -277,7 +291,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
 
     await mapWithConcurrency(category.channels, 3, async (channel, channelIndex) => {
-      throwIfBuildAborted(options.signal);
+      throwIfBuildAborted(buildSignal);
       const displayChannelIndex = channelIndex + 1;
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       try {
@@ -356,7 +370,8 @@ async function applyServerPlan(guild, plan, options = {}) {
     console.error("[SERVER-BUILD] Aufbau abgebrochen:", error?.stack || error);
     throw error;
   } finally {
-    activeBuildGuilds.delete(guild.id);
+    if (activeBuildGuilds.get(guild.id) === buildRecord) activeBuildGuilds.delete(guild.id);
+    finishBuild();
   }
 }
 
