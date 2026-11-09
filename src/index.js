@@ -6,7 +6,7 @@ const {
 const { createServerPlan } = require("./ai");
 const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-preset");
 const { buildWebsiteHtml } = require("./website");
-const { applyServerPlan } = require("./discord-builder");
+const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 
@@ -26,6 +26,28 @@ if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true"
 }
 const client = new Client({ intents, rest: { timeout: 60000 } });
 const pendingPlans = new Map();
+const buildAbortController = new AbortController();
+
+// Beim Start alle übrig gebliebenen In-Process-Sperren entfernen.
+const clearedBuildLocks = resetActiveBuilds();
+console.log("[BOT] Verwaiste Serveraufbau-Sperren beim Start entfernt:", clearedBuildLocks);
+
+// Railway und andere Prozessmanager senden SIGTERM beim Neustart/Deploy.
+// Den laufenden Aufbau sofort abbrechen, bevor weitere Elemente angelegt werden.
+let isShuttingDown = false;
+function stopActiveBuilds(signalName) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.warn("[BOT] " + signalName + " empfangen – laufender Serveraufbau wird abgebrochen.");
+  buildAbortController.abort();
+  try { client.destroy(); } catch (error) {
+    console.warn("[BOT] Discord-Verbindung konnte nicht sauber geschlossen werden:", error.message);
+  }
+  // Sicherheitsnetz: nicht endlos auf eine Discord-API-Anfrage warten.
+  setTimeout(() => process.exit(0), 4000);
+}
+process.once("SIGTERM", () => stopActiveBuilds("SIGTERM"));
+process.once("SIGINT", () => stopActiveBuilds("SIGINT"));
 
 console.log("[BOT-BUILD] Builder hardening 2026-11-09 – preflight, no progress channel");
 
@@ -462,6 +484,7 @@ client.on("interactionCreate", async interaction => {
         replaceServer: entry.replaceServer,
         ownerId: interaction.user.id,
         keepChannelId: interaction.channelId,
+        signal: buildAbortController.signal,
         onProgress: message => interaction.editReply({ content: message })
       });
       const dutyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🟢・admin-dienst" || ch.name === "admin-dienst");
