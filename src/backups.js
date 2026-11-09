@@ -196,7 +196,7 @@ async function restoreGuildBackup(guild, backupMessageId) {
 function startWeeklyBackups(client) {
   const tick = async () => {
     const parts = berlinParts();
-    if (parts.weekday !== "Mon" || Number(parts.hour) !== 10 || Number(parts.minute) > 2) return;
+    if (parts.weekday !== "Mon" || Number(parts.hour) !== 10) return;
     const key = isoWeekKey({ year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) });
     for (const guild of client.guilds.cache.values()) {
       try {
