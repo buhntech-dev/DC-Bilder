@@ -34,6 +34,7 @@ In Railway unter Variables setzen:
 - optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll
 - optional `MINECRAFT_ADDRESS`: Minecraft-Adresse für Statusabfragen (Standard: `Communety.aternos.me:18884`)
 - optional `RCON_HOST`, `RCON_PORT`, `RCON_PASSWORD`: nur für Server mit aktivierter RCON-Schnittstelle; Passwort ausschließlich als Railway-Variable setzen
+- optional `DISCORD_INVITE_URL`: gültiger Discord-Einladungslink für die generierte Website
 
 **Wichtig:** Keine echten Tokens in GitHub-Dateien speichern. Wenn ein Token versehentlich veröffentlicht wurde, im Discord Developer Portal zurücksetzen und Railway aktualisieren.
 
