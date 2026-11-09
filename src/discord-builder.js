@@ -286,24 +286,32 @@ async function applyServerPlan(guild, plan, options = {}) {
 function rolePermissions(name) {
   const p = PermissionFlagsBits;
   if (name === "Owner") return [p.Administrator];
-  if (["Management", "Administrator"].includes(name)) {
+  if (["Management", "Administrator", "Senior Administrator"].includes(name)) {
     return [
       p.ManageChannels, p.ManageRoles, p.ManageMessages,
       p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
     ];
   }
-  if (name === "Moderator") {
+  if (["Moderator", "Senior Moderator"].includes(name)) {
     return [p.ManageMessages, p.ModerateMembers, p.KickMembers];
   }
-  if (name === "Supporter") {
+  if (["Supporter", "Senior Supporter"].includes(name)) {
     return [p.ManageMessages];
   }
   return [];
 }
 
 function buildChannelOverwrites(guild, names, roleMap, ownerId) {
-  const matchedRoles = [...new Set((names || [])
-    .map(name => roleMap.get(String(name).toLowerCase()))
+  const roleNames = new Set((names || []).map(name => String(name).toLowerCase()));
+  // Höhere Stufen der Teamleiter erhalten automatisch dieselben privaten Bereiche.
+  if (roleNames.has("administrator")) roleNames.add("senior administrator");
+  if (roleNames.has("moderator")) roleNames.add("senior moderator");
+  if (roleNames.has("supporter")) {
+    roleNames.add("senior supporter");
+    roleNames.add("test support");
+  }
+  const matchedRoles = [...new Set([...roleNames]
+    .map(name => roleMap.get(name))
     .filter(Boolean))];
   const overwrites = [];
   if ((names || []).length) {
