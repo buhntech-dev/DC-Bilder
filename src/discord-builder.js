@@ -2,6 +2,22 @@ const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, Button
 
 const activeBuildGuilds = new Set();
 
+// Ein Neustart beendet den bisherigen Node-Prozess und damit alle laufenden Builds.
+// Diese Funktion entfernt zusätzlich verwaiste In-Process-Sperren beim Bot-Start.
+function resetActiveBuilds() {
+  const count = activeBuildGuilds.size;
+  activeBuildGuilds.clear();
+  return count;
+}
+
+function throwIfBuildAborted(signal) {
+  if (signal?.aborted) {
+    const error = new Error("Serveraufbau wurde wegen eines Bot-Neustarts oder Shutdowns abgebrochen. Bereits erstellte oder gelöschte Elemente bleiben bestehen.");
+    error.code = "BUILD_ABORTED";
+    throw error;
+  }
+}
+
 function cleanName(value, fallback) {
   const name = String(value || fallback).trim().slice(0, 90);
   return name || fallback;
@@ -45,6 +61,7 @@ function validateServerPlan(plan) {
 
 async function applyServerPlan(guild, plan, options = {}) {
   validateServerPlan(plan);
+  throwIfBuildAborted(options.signal);
   const createdRoles = new Map();
   const created = {
     roles: 0, categories: 0, channels: 0,
@@ -102,6 +119,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
+      throwIfBuildAborted(options.signal);
       if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
@@ -126,6 +144,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       );
 
     for (const role of rolesToDelete) {
+      throwIfBuildAborted(options.signal);
       try {
         await role.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedRoles++;
@@ -149,6 +168,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   };
   const createdRoleList = [];
   for (const [index, role] of plan.roles.entries()) {
+    throwIfBuildAborted(options.signal);
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
@@ -214,6 +234,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   let categoryIndex = 0;
   for (const category of plan.categories) {
+    throwIfBuildAborted(options.signal);
     categoryIndex++;
     await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …", true);
     let parent;
@@ -233,6 +254,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 
     let channelIndex = 0;
     for (const channel of category.channels) {
+      throwIfBuildAborted(options.signal);
       channelIndex++;
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       try {
@@ -376,4 +398,4 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId) {
   return overwrites;
 }
 
-module.exports = { applyServerPlan };
+module.exports = { applyServerPlan, resetActiveBuilds };
