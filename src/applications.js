@@ -161,11 +161,13 @@ async function handleApplicationInteraction(interaction) {
         await interaction.editReply("Dieser Minecraft-Name ist bereits einem anderen Discord-Mitglied zugeordnet. Bitte prüfe den Antrag manuell.");
         return true;
       }
+      let nicknameUpdated = false;
       const botMember = await interaction.guild.members.fetchMe();
       if (botMember.permissions.has(PermissionFlagsBits.Administrator) ||
           botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
         try {
           await applicant.setNickname(minecraftName, "Minecraft-Whitelist angenommen");
+          nicknameUpdated = true;
         } catch (error) {
           resultNote = " Die Mitglied-Rolle wurde vergeben, aber der Discord-Name konnte nicht geändert werden: " + String(error.message || error).slice(0, 180);
         }
@@ -180,7 +182,7 @@ async function handleApplicationInteraction(interaction) {
       } catch (registryError) {
         resultNote += " Interner Registereintrag fehlgeschlagen: " + String(registryError.message || registryError).slice(0, 180);
       }
-      await applicant.send("✅ Deine Whitelist-Anfrage wurde angenommen." + (resultNote ? " Dein Discord-Name konnte eventuell nicht automatisch geändert werden." : " Dein Discord-Name wurde auf **" + minecraftName + "** gesetzt.")).catch(() => {});
+      await applicant.send("✅ Deine Whitelist-Anfrage wurde angenommen." + (nicknameUpdated ? " Dein Discord-Name wurde auf **" + minecraftName + "** gesetzt." : " Dein Discord-Name konnte nicht automatisch geändert werden.") + resultNote).catch(() => {});
     } else {
       await applicant.send("Deine " + (kind === "application" ? "Team-Bewerbung" : "Whitelist-Anfrage") + " wurde leider abgelehnt. Bei Fragen wende dich bitte an das Team.").catch(() => {});
     }
