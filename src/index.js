@@ -133,16 +133,21 @@ client.on("interactionCreate", async interaction => {
       await interaction.update({ content: "🧹 Server wird geleert. Bot-Befehle-Kanal bleibt erhalten …", components: [] });
       try {
         const guild = interaction.guild;
+        await guild.channels.fetch();
         const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
-        const keepChannels = guild.channels.cache.filter(ch => keepNames.has(ch.name.toLowerCase()));
+        const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
+        const keepChannels = guild.channels.cache.filter(ch =>
+          keepNames.has(ch.name.toLowerCase()) || communityKeepIds.has(ch.id)
+        );
         const keepParentIds = new Set(keepChannels.map(ch => ch.parentId).filter(Boolean));
         let deletedChannels = 0, failedChannels = 0, deletedRoles = 0, failedRoles = 0;
         for (const channel of [...guild.channels.cache.values()]) {
-          if (keepNames.has(channel.name.toLowerCase())) continue;
+          if (keepNames.has(channel.name.toLowerCase()) || communityKeepIds.has(channel.id)) continue;
           if (channel.type === ChannelType.GuildCategory && keepParentIds.has(channel.id)) continue;
           try { await channel.delete("Serverinhaber hat /server-leeren bestätigt"); deletedChannels++; }
           catch (error) { failedChannels++; console.warn("Kanal-Löschung fehlgeschlagen:", channel.name, error.message); }
         }
+        await guild.roles.fetch();
         const botMember = await guild.members.fetchMe();
         const botHighest = botMember.roles.highest;
         for (const role of [...guild.roles.cache.values()]) {
