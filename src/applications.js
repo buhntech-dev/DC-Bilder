@@ -84,7 +84,8 @@ async function handleApplicationInteraction(interaction) {
       ).setTimestamp();
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("application_accept:" + interaction.user.id).setLabel("Annehmen").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("application_reject:" + interaction.user.id).setLabel("Ablehnen").setStyle(ButtonStyle.Danger)
+      new ButtonBuilder().setCustomId("application_reject:" + interaction.user.id).setLabel("Ablehnen").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId("application_interview:" + interaction.user.id).setLabel("Gespräch einladen").setStyle(ButtonStyle.Primary)
     );
     await review.send({ embeds: [embed], components: [row] });
     await interaction.editReply("✅ Deine Bewerbung wurde an das Team gesendet. Du bekommst eine Nachricht, sobald sie bearbeitet wurde.");
@@ -133,6 +134,11 @@ async function handleApplicationInteraction(interaction) {
     }
     const embed = interaction.message.embeds[0];
     const minecraftName = embed?.fields?.find(field => field.name === "Minecraft-Name")?.value;
+    if (action === "interview" && kind === "application") {
+      await applicant.send("📞 Das Team möchte ein Bewerbungsgespräch mit dir führen. Bitte melde dich im Discord oder eröffne ein Ticket, damit wir einen Termin vereinbaren können.").catch(() => {});
+      await interaction.editReply("📩 Einladung zum Bewerbungsgespräch wurde versendet (falls Direktnachrichten möglich sind).");
+      return true;
+    }
     if (action === "accept" && kind === "application") {
       const role = interaction.guild.roles.cache.find(item => item.name === "Test Support");
       if (!role) {
