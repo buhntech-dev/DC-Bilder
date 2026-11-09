@@ -231,6 +231,30 @@ async function test(name, fn) {
     assert.notEqual(audio.readInt16LE(0), 0);
     assert.equal(audio.readInt16LE(0), audio.readInt16LE(2));
   });
+\n
+  await test("Minecraft-Preset enthält Teamleitung", () => assert.ok(mc.roles.some(r => r.name === "Teamleitung")));
+  await test("Minecraft-Preset enthält privaten Team-Regelkanal", () => {
+    const channel = mc.categories.flatMap(c => c.channels).find(c => c.name.includes("team-regeln"));
+    assert.ok(channel && channel.privateToRoles.includes("Teamleitung"));
+  });
+  await test("Teamleitung erhält Verwaltungsrechte", () => assert.ok(rolePermissions("Teamleitung").includes(PermissionFlagsBits.ManageRoles)));
+  await test("Bot erhält Zugriff auf private Kanäle", () => {
+    const overwrites = buildChannelOverwrites({ roles: { everyone: { id: "everyone" } } }, ["Supporter"], new Map(), null, "bot-id");
+    assert.ok(overwrites.some(o => o.id === "bot-id" && o.allow.includes(PermissionFlagsBits.Connect)));
+  });
+  await test("Neue Status- und Backup-Befehle sind registriert", () => {
+    const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    for (const command of ["serverstatus", "beforderung", "backup", "backup-wiederherstellen", "papierkorb"]) {
+      assert.ok(commandsSource.includes('setName("' + command + '")'), "Fehlender Befehl: " + command);
+    }
+  });
+  await test("Beförderungs- und Backup-Module exportieren ihre Kernfunktionen", () => {
+    assert.equal(typeof createPromotionRequest, "function");
+    assert.equal(typeof handlePromotionInteraction, "function");
+    assert.equal(typeof createGuildBackup, "function");
+    assert.equal(typeof restoreGuildBackup, "function");
+    assert.equal(typeof startWeeklyBackups, "function");
+  });
 \n  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
