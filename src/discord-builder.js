@@ -137,11 +137,18 @@ async function applyServerPlan(guild, plan, options = {}) {
   }
 
   // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
+  const reportProgress = async message => {
+    if (typeof options.onProgress === "function") {
+      try { await options.onProgress(message); }
+      catch (progressError) { console.warn("[SERVER-BUILD] Fortschrittsmeldung fehlgeschlagen:", progressError.message); }
+    }
+  };
   const createdRoleList = [];
   for (const [index, role] of plan.roles.entries()) {
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
+      await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …");
       console.log("[SERVER-BUILD] Erstelle Rolle:", name);
       const createdRole = await guild.roles.create({
         name, colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) }, hoist: Boolean(role.hoist),
@@ -152,6 +159,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
+      await reportProgress("Rollen: **" + created.roles + "/" + plan.roles.length + "** erstellt. Als Nächstes kommen Kategorien und Kanäle …");
     } catch (error) {
       created.failedItems++;
       created.errors.push("Rolle " + name + ": " + String(error.message || error));
@@ -187,7 +195,10 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
 
+  let categoryIndex = 0;
   for (const category of plan.categories) {
+    categoryIndex++;
+    await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
     try {
       parent = await guild.channels.create({
@@ -203,9 +214,12 @@ async function applyServerPlan(guild, plan, options = {}) {
       continue;
     }
 
+    let channelIndex = 0;
     for (const channel of category.channels) {
+      channelIndex++;
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       try {
+      await reportProgress("Kategorie " + categoryIndex + "/" + plan.categories.length + " – Kanal " + channelIndex + "/" + category.channels.length + ": **#" + channelName + "** …");
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
         name: channelName, type, parent: parent.id,
