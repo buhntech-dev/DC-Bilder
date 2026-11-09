@@ -21,7 +21,8 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 
 ## Railway
 - Build Command: `npm install`
-- Start Command: `npm start`\n- Pre-deploy Command: `npm run check && npm run register`
+- Start Command: `npm start`
+- Pre-deploy Command: `npm run check && npm run register`
 - Node-Version: 26.x (wird über `.node-version` festgelegt)
 
 ## Umgebungsvariablen
@@ -30,7 +31,8 @@ In Railway unter Variables setzen:
 - `CLIENT_ID`: Application ID
 - `GUILD_ID`: Discord-Server-ID, in dem Slash-Befehle registriert werden
 - `OWNER_ID`: Discord-Benutzer-ID des Bot-Besitzers
-- optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll\n- optional `MINECRAFT_ADDRESS`: Minecraft-Adresse für Statusabfragen (Standard: `Communety.aternos.me:18884`)
+- optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll
+- optional `MINECRAFT_ADDRESS`: Minecraft-Adresse für Statusabfragen (Standard: `Communety.aternos.me:18884`)
 
 **Wichtig:** Keine echten Tokens in GitHub-Dateien speichern. Wenn ein Token versehentlich veröffentlicht wurde, im Discord Developer Portal zurücksetzen und Railway aktualisieren.
 
