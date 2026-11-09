@@ -8,6 +8,7 @@ const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-pr
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
+const { handleApplicationInteraction, panelRow } = require("./applications");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -123,6 +124,8 @@ client.once("clientReady", async () => {
 
 client.on("interactionCreate", async interaction => {
   try {
+  if (await handleApplicationInteraction(interaction)) return;
+
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
     const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
@@ -280,10 +283,29 @@ client.on("interactionCreate", async interaction => {
       ban: PermissionFlagsBits.BanMembers, timeout: PermissionFlagsBits.ModerateMembers,
       announce: PermissionFlagsBits.ManageMessages, lock: PermissionFlagsBits.ManageChannels,
       unlock: PermissionFlagsBits.ManageChannels, slowmode: PermissionFlagsBits.ManageChannels,
-      ticketpanel: PermissionFlagsBits.ManageChannels
+      ticketpanel: PermissionFlagsBits.ManageChannels,
+      "bewerbung-panel": PermissionFlagsBits.ManageChannels,
+      "whitelist-panel": PermissionFlagsBits.ManageChannels
     };
     const needed = permissions[interaction.commandName];
     if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung." });
+
+    if (interaction.commandName === "bewerbung-panel" || interaction.commandName === "whitelist-panel") {
+      const isApplication = interaction.commandName === "bewerbung-panel";
+      const embed = new EmbedBuilder()
+        .setColor(isApplication ? 0x5865F2 : 0x2ECC71)
+        .setTitle(isApplication ? "📝 Team-Bewerbung" : "🛡️ Minecraft-Whitelist")
+        .setDescription(isApplication
+          ? "Du möchtest Teil unseres Teams werden? Klicke auf **Bewerbung starten** und fülle das Formular aus. Deine Bewerbung wird vertraulich vom Team geprüft."
+          : "Du möchtest auf den Minecraft-Server? Klicke auf **Whitelist beantragen** und sende deinen Minecraft-Namen. Das Team prüft deinen Antrag.");
+      await interaction.channel.send({
+        embeds: [embed],
+        components: [panelRow(isApplication ? "application_open" : "whitelist_open",
+          isApplication ? "Bewerbung starten" : "Whitelist beantragen", isApplication ? "📝" : "🛡️")]
+      });
+      return interaction.editReply(isApplication ? "✅ Bewerbungs-Panel wurde veröffentlicht." : "✅ Whitelist-Panel wurde veröffentlicht.");
+    }
+
     if (!ownerOnly) {
       try {
         const cmd = interaction.commandName;
