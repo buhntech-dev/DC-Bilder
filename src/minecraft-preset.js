@@ -9,11 +9,15 @@ function createMinecraftPreset() {
   const roles = [
     { name: "Owner", color: "#E74C3C", hoist: true, mentionable: false },
     { name: "Management", color: "#9B59B6", hoist: true, mentionable: false },
+    { name: "Senior Administrator", color: "#C0392B", hoist: true, mentionable: false },
     { name: "Administrator", color: "#E67E22", hoist: true, mentionable: false },
     { name: "Admin im Dienst", color: "#2ECC71", hoist: true, mentionable: false },
     { name: "Admin außer Dienst", color: "#95A5A6", hoist: true, mentionable: false },
+    { name: "Senior Moderator", color: "#2874A6", hoist: true, mentionable: false },
     { name: "Moderator", color: "#3498DB", hoist: true, mentionable: false },
+    { name: "Senior Supporter", color: "#148F77", hoist: true, mentionable: false },
     { name: "Supporter", color: "#1ABC9C", hoist: true, mentionable: false },
+    { name: "Test Support", color: "#76D7C4", hoist: true, mentionable: false },
     { name: "Developer", color: "#34495E", hoist: true, mentionable: false },
     { name: "Builder", color: "#D35400", hoist: true, mentionable: false },
     { name: "Content Creator", color: "#E91E63", hoist: true, mentionable: false },
@@ -97,6 +101,7 @@ function createMinecraftPreset() {
     cat("🛡️ TEAMVERWALTUNG", [
       ch("📨・bewerbungen", "Bewerbungen für das Serverteam"),
       ch("🗂️・bewerbungsbearbeitung", "Bewerbungen intern bearbeiten", ["Owner", "Management", "Administrator"]),
+      ch("🛡️・whitelist-bearbeitung", "Whitelist-Anträge prüfen und annehmen oder ablehnen", ["Owner", "Management", "Administrator"]),
       ch("📅・team-planung", "Aufgaben und Teamtermine", ["Owner", "Management", "Administrator"]),
       ch("📝・team-protokolle", "Interne Protokolle", ["Owner", "Management", "Administrator"])
     ]),
