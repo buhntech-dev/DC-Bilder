@@ -2,8 +2,14 @@ const { joinVoiceChannel, VoiceConnectionStatus, entersState, getVoiceConnection
 
 async function joinSupportVoice(client, guild) {
   const configuredId = process.env.SUPPORT_VOICE_CHANNEL_ID;
-  let channel = configuredId ? guild.channels.cache.get(configuredId) : null;
-  if (!channel) channel = guild.channels.cache.find(ch => ch.isVoiceBased() && /support/i.test(ch.name));
+  let channel = null;
+  if (configuredId) {
+    channel = guild.channels.cache.get(configuredId) ||
+      await guild.channels.fetch(configuredId).catch(() => null);
+  } else {
+    await guild.channels.fetch();
+    channel = guild.channels.cache.find(ch => ch.isVoiceBased() && /support/i.test(ch.name));
+  }
   if (!channel || !channel.isVoiceBased()) {
     console.log(`Kein Support-Sprachkanal auf ${guild.name} gefunden. Setze SUPPORT_VOICE_CHANNEL_ID oder erstelle einen Sprachkanal mit "Support" im Namen.`);
     return null;
