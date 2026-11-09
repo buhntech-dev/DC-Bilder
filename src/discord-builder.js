@@ -10,18 +10,53 @@ function validColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#5865F2";
 }
 
+function validateServerPlan(plan) {
+  if (!plan || !Array.isArray(plan.roles) || !Array.isArray(plan.categories)) {
+    throw new Error("Der Serverplan ist ungültig: Rollen oder Kategorien fehlen.");
+  }
+  const roleNames = new Set();
+  for (const role of plan.roles) {
+    const name = cleanName(role?.name, "");
+    if (!name) throw new Error("Eine Rolle im Serverplan hat keinen gültigen Namen.");
+    const key = name.toLowerCase();
+    if (roleNames.has(key)) throw new Error("Die Rolle \"" + name + "\" ist im Plan doppelt vorhanden.");
+    roleNames.add(key);
+  }
+  let plannedChannels = plan.categories.length;
+  for (const category of plan.categories) {
+    if (!category || !Array.isArray(category.channels)) {
+      throw new Error("Eine Kategorie im Serverplan enthält keine gültige Kanalliste.");
+    }
+    if (category.channels.length > 50) {
+      throw new Error("Die Kategorie \"" + cleanName(category.name, "Kategorie") + "\" enthält mehr als 50 Kanäle.");
+    }
+    plannedChannels += category.channels.length;
+    for (const channel of category.channels) {
+      if (!cleanName(channel?.name, "")) throw new Error("Ein Kanal im Serverplan hat keinen gültigen Namen.");
+      if (!["text", "voice"].includes(channel.type || "text")) {
+        throw new Error("Ungültiger Kanaltyp in \"" + channel.name + "\".");
+      }
+    }
+  }
+  if (plannedChannels > 500) throw new Error("Der Plan überschreitet Discords Limit von 500 Kanälen und Kategorien.");
+  if (plan.roles.length > 250) throw new Error("Der Plan überschreitet Discords Rollenlimit.");
+  return plannedChannels;
+}
+
 async function applyServerPlan(guild, plan, options = {}) {
+  validateServerPlan(plan);
   const createdRoles = new Map();
   const created = {
     roles: 0, categories: 0, channels: 0,
     deletedChannels: 0, deletedRoles: 0, skippedRoles: 0, failedDeletes: 0,
     failedItems: 0, errors: []
   };
-  const totalRoles = plan.roles.length;
-  const totalChannels = plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
 
-  // Rechte vor jeder destruktiven Aktion prüfen, damit ein unvollständiger
-  // Bot-Invite nicht erst Kanäle löscht und danach beim Erstellen scheitert.
+  if (activeBuildGuilds.has(guild.id)) throw new Error("Auf diesem Discord läuft bereits ein Serveraufbau. Bitte warte, bis er abgeschlossen ist.");
+  activeBuildGuilds.add(guild.id);
+
+  try {
+  // Rechte und Discord-Limits vor jeder Löschung prüfen.
   const botMemberForCheck = await guild.members.fetchMe();
   const missing = [];
   if (!botMemberForCheck.permissions.has(PermissionFlagsBits.Administrator) &&
@@ -29,14 +64,31 @@ async function applyServerPlan(guild, plan, options = {}) {
   if (!botMemberForCheck.permissions.has(PermissionFlagsBits.Administrator) &&
       !botMemberForCheck.permissions.has(PermissionFlagsBits.ManageRoles)) missing.push("Rollen verwalten");
   if (missing.length) throw new Error("Dem Bot fehlen vor dem Aufbau diese Rechte: " + missing.join(" und ") + ". Es wurde nichts gelöscht.");
-  if (activeBuildGuilds.has(guild.id)) throw new Error("Auf diesem Discord läuft bereits ein Serveraufbau. Bitte warte, bis er abgeschlossen ist.");
-  activeBuildGuilds.add(guild.id);
 
-  try {
-  // Nur /minecraft darf den bestehenden Server ersetzen.
+  await guild.channels.fetch();
+  await guild.roles.fetch();
+  const keepCommandNamesForCheck = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+  const communityKeepIdsForCheck = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
+  const keptChannels = guild.channels.cache.filter(channel =>
+    keepCommandNamesForCheck.has(channel.name.toLowerCase()) ||
+    channel.id === options.keepChannelId ||
+    communityKeepIdsForCheck.has(channel.id)
+  );
+  const keptParentIds = new Set(keptChannels.map(channel => channel.parentId).filter(Boolean));
+  const preservedChannelCount = keptChannels.size + [...keptParentIds].filter(id => !keptChannels.has(id)).length;
+  const deletableRoles = [...guild.roles.cache.values()].filter(role =>
+    role.id !== guild.id && !role.managed && role.id !== botMemberForCheck.roles.highest.id &&
+    role.comparePositionTo(botMemberForCheck.roles.highest) < 0
+  );
+  const projectedChannels = preservedChannelCount + plan.categories.length +
+    plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
+  const projectedRoles = guild.roles.cache.size - deletableRoles.length + plan.roles.length;
+  if (projectedChannels > 500) throw new Error("Der Neuaufbau würde Discords Limit von 500 Kanälen überschreiten. Es wurde nichts gelöscht.");
+  if (projectedRoles > 250) throw new Error("Der Neuaufbau würde Discords Limit von 250 Rollen überschreiten. Es wurde nichts gelöscht.");
+
+  // Nur /minecraft und /profimine dürfen den bestehenden Server ersetzen.
   if (options.replaceServer === true) {
-    // Alle Kanäle laden und Discord-Community-Pflichtkanäle erhalten.
-    await guild.channels.fetch();
+    // Bereits geladene Kanäle und Community-Pflichtkanäle erhalten.
     const keepCommandNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
     const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
     const keepCommandChannels = guild.channels.cache.filter(channel =>
@@ -131,7 +183,6 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
 
-  let completedCategories = 0;
   for (const category of plan.categories) {
     let parent;
     try {
@@ -147,7 +198,6 @@ async function applyServerPlan(guild, plan, options = {}) {
       console.error("[SERVER-BUILD] Kategorie fehlgeschlagen:", category.name, error);
       continue;
     }
-    completedCategories++;
 
     for (const channel of category.channels) {
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
@@ -217,7 +267,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         created.failedItems++;
         created.errors.push("Kanal " + channelName + ": " + String(error.message || error));
         console.error("[SERVER-BUILD] Kanal fehlgeschlagen:", channelName, error);
-      } finally {}
+      }
     }
   }
   return created;
