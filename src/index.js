@@ -566,12 +566,15 @@ client.on("interactionCreate", async interaction => {
     pendingPlans.delete(key);
     await interaction.update({
       content: entry.replaceServer
-        ? "Baue den Server neu auf: lösche zuerst alte Kanäle und Rollen, danach erstelle ich das Minecraft-Layout …"
+        ? "Erstelle zuerst ein Sicherheitsbackup und baue danach den Server neu auf …"
         : "Erstelle Rollen, Kategorien und Kanäle … bitte kurz warten.",
       embeds: [], components: []
     });
 
     try {
+      const safetyBackup = entry.replaceServer
+        ? await createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")
+        : null;
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
         ownerId: interaction.user.id,
@@ -595,7 +598,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.${safetyBackup ? "\nSicherheitsbackup-ID: " + safetyBackup.messageId : ""}\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
