@@ -306,7 +306,7 @@ client.on("interactionCreate", async interaction => {
         const backupId = interaction.options.getString("backup_id", true).trim();
         if (!/^\d{17,20}$/.test(backupId)) return interaction.editReply("Bitte gib eine gültige Discord-Nachrichten-ID ein.");
         const result = await restoreGuildBackup(interaction.guild, backupId);
-        return interaction.editReply(`✅ Wiederherstellung abgeschlossen. Neu erstellt: **${result.rolesCreated} Rollen** und **${result.channelsCreated} Kanäle**. Bestehende Elemente wurden nicht gelöscht.`);
+        return interaction.editReply(`✅ Wiederherstellung abgeschlossen. Neu erstellt: **${result.rolesCreated} Rollen**, **${result.categoriesCreated} Kategorien** und **${result.channelsCreated} Kanäle**. Bestehende Elemente wurden nicht gelöscht.`);
       } catch (error) {
         console.error("Backup-Wiederherstellung fehlgeschlagen:", error);
         return interaction.editReply("Wiederherstellung fehlgeschlagen: " + String(error.message || error).slice(0, 500));
@@ -352,7 +352,7 @@ client.on("interactionCreate", async interaction => {
           .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
-        content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Ein Kanal namens **#bot-commands**, **#bot-befehle** oder **#botcommands** bleibt erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
+        content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Die Kanäle **#bot-commands**, **#bot-befehle**, **#botcommands** und **#backup-archiv** bleiben erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
         components: [row]
       });
     }
