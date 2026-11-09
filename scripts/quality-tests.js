@@ -5,11 +5,11 @@ const { createServerPlan } = require("../src/ai");
 const { buildWebsiteHtml, escapeHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
-const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
+const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS, buildStatusChannelOverwrites, ensureStatusChannel } = require("../src/minecraft-status");
 const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { searchRegisteredPlayers } = require("../src/player-registry");
-const { createSupportChime } = require("../src/support-voice");
+const { createSupportChime, buildSupportVoiceOverwrites, ensureSupportVoiceChannel } = require("../src/support-voice");
 const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
 const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
 
@@ -400,6 +400,70 @@ async function test(name, fn) {
     } finally {
       global.fetch = originalFetch;
     }
+  });
+
+
+  await test("Statuskanal sperrt Schreiben für normale Mitglieder", () => {
+    const overwrites = buildStatusChannelOverwrites({ id: "guild", roles: { everyone: { id: "guild" } } }, "bot");
+    const everyone = overwrites.find(item => item.id === "guild");
+    assert.ok(everyone.deny.includes(PermissionFlagsBits.SendMessages));
+    assert.ok(everyone.allow.includes(PermissionFlagsBits.ViewChannel));
+  });
+  await test("Statuskanal erlaubt dem Bot Statusmeldungen", () => {
+    const overwrites = buildStatusChannelOverwrites({ id: "guild", roles: { everyone: { id: "guild" } } }, "bot");
+    const bot = overwrites.find(item => item.id === "bot");
+    assert.ok(bot.allow.includes(PermissionFlagsBits.SendMessages));
+    assert.ok(bot.allow.includes(PermissionFlagsBits.EmbedLinks));
+  });
+  await test("Support-Sprachkanal erlaubt Bot-Sprechen", () => {
+    const overwrites = buildSupportVoiceOverwrites({ id: "guild", roles: { everyone: { id: "guild" }, cache: [] } }, "bot");
+    const bot = overwrites.find(item => item.id === "bot");
+    assert.ok(bot.allow.includes(PermissionFlagsBits.Connect));
+    assert.ok(bot.allow.includes(PermissionFlagsBits.Speak));
+  });
+  await test("Support-Sprachkanal gibt Teamleitung Moderationsrechte", () => {
+    const { Collection } = require("discord.js");
+    const role = { id: "lead", name: "Teamleitung" };
+    const overwrites = buildSupportVoiceOverwrites({ id: "guild", roles: { everyone: { id: "guild" }, cache: new Collection([["lead", role]]) } }, "bot");
+    const lead = overwrites.find(item => item.id === "lead");
+    assert.ok(lead.allow.includes(PermissionFlagsBits.MoveMembers));
+    assert.ok(lead.allow.includes(PermissionFlagsBits.ManageChannels));
+  });
+  await test("Fehlender Statuskanal wird automatisch angelegt", async () => {
+    const { Collection, PermissionFlagsBits: Flags } = require("discord.js");
+    const channels = new Collection();
+    let createdOptions;
+    const guild = {
+      id: "g",
+      roles: { everyone: { id: "g" } },
+      channels: {
+        cache: channels,
+        async fetch() { return channels; },
+        async create(options) { createdOptions = options; const channel = { id: "status", ...options }; channels.set(channel.id, channel); return channel; }
+      },
+      members: { async fetchMe() { return { id: "bot", permissions: { has: permission => permission === Flags.ManageChannels } }; } }
+    };
+    const channel = await ensureStatusChannel(guild);
+    assert.equal(channel.name, "server-status");
+    assert.ok(createdOptions.permissionOverwrites.some(item => item.id === "bot"));
+  });
+  await test("Fehlender Support-Sprachkanal wird automatisch angelegt", async () => {
+    const { Collection, ChannelType, PermissionFlagsBits: Flags } = require("discord.js");
+    const channels = new Collection();
+    const roles = new Collection();
+    const guild = {
+      id: "g",
+      roles: { everyone: { id: "g" }, cache: roles, async fetch() { return roles; } },
+      channels: {
+        cache: channels,
+        async fetch() { return channels; },
+        async create(options) { const channel = { id: "voice", ...options, isVoiceBased: () => true }; channels.set(channel.id, channel); return channel; }
+      }
+    };
+    const botMember = { id: "bot", permissions: { has: permission => permission === Flags.ManageChannels } };
+    const channel = await ensureSupportVoiceChannel(guild, botMember);
+    assert.equal(channel.name, "support-warteraum");
+    assert.equal(channel.type, ChannelType.GuildVoice);
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
