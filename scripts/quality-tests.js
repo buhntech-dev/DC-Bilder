@@ -6,7 +6,9 @@ const { buildWebsiteHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
-const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");\nconst { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");\nconst { createSupportChime } = require("../src/support-voice");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");
+const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");
+const { createSupportChime } = require("../src/support-voice");
 
 let passed = 0;
 async function test(name, fn) {
@@ -191,7 +193,8 @@ async function test(name, fn) {
     const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
     assert.equal(hasTeamLeadAccess(member), false);
   });
-\n
+
+
   await test("Backup-Wochenkennung berechnet ISO-Woche", () => assert.equal(isoWeekKey({ year: 2026, month: 1, day: 1 }), "2026-W01"));
   await test("Backup-Wochenkennung verarbeitet Jahreswechsel", () => assert.equal(isoWeekKey({ year: 2025, month: 12, day: 29 }), "2026-W01"));
   await test("Berlin-Zeitzone berücksichtigt Winterzeit", () => {
@@ -219,7 +222,8 @@ async function test(name, fn) {
     assert.equal(snapshot.roles.length, 1);
     assert.equal(snapshot.roles[0].permissions, "8");
   });
-\n
+
+
   await test("Support-Signalton wird als PCM-Audio erzeugt", () => {
     const audio = createSupportChime();
     assert.ok(Buffer.isBuffer(audio));
@@ -231,7 +235,8 @@ async function test(name, fn) {
     assert.notEqual(audio.readInt16LE(0), 0);
     assert.equal(audio.readInt16LE(0), audio.readInt16LE(2));
   });
-\n
+
+
   await test("Minecraft-Preset enthält Teamleitung", () => assert.ok(mc.roles.some(r => r.name === "Teamleitung")));
   await test("Minecraft-Preset enthält privaten Team-Regelkanal", () => {
     const channel = mc.categories.flatMap(c => c.channels).find(c => c.name.includes("team-regeln"));
@@ -255,7 +260,8 @@ async function test(name, fn) {
     assert.equal(typeof restoreGuildBackup, "function");
     assert.equal(typeof startWeeklyBackups, "function");
   });
-\n  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
+
+  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
   console.error(error);
