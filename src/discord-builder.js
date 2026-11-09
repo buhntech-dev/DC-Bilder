@@ -418,7 +418,8 @@ function rolePermissions(name) {
 function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   const roleNames = new Set((names || []).map(name => String(name).toLowerCase()));
   // Höhere Stufen der Teamleiter erhalten automatisch dieselben privaten Bereiche.
-  if (roleNames.has("management")) roleNames.add("teamleitung");\n  if (roleNames.has("administrator")) roleNames.add("senior administrator");
+  if (roleNames.has("management")) roleNames.add("teamleitung");
+  if (roleNames.has("administrator")) roleNames.add("senior administrator");
   if (roleNames.has("moderator")) roleNames.add("senior moderator");
   if (roleNames.has("supporter")) {
     roleNames.add("senior supporter");
