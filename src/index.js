@@ -362,7 +362,7 @@ client.on("interactionCreate", async interaction => {
       pendingPlans.set(key, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${(isMinecraft || isProfiMine) ? "reviewreplace" : "apply"}:${interaction.user.id}`)
+          .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}`)
           .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
           .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
@@ -416,20 +416,6 @@ client.on("interactionCreate", async interaction => {
     if (action === "cancel") {
       pendingPlans.delete(key);
       return interaction.update({ content: "Abgebrochen. Es wurde nichts gelöscht oder erstellt.", embeds: [], components: [] });
-    }
-
-    if (action === "reviewreplace") {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`finalreplace:${interaction.user.id}`)
-          .setLabel("JA – Kanäle und Rollen löschen und neu aufbauen")
-          .setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
-          .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
-      );
-      return interaction.update({
-        content: "LETZTE WARNUNG: Dieser Vorgang löscht vorhandene Kanäle/Kategorien und löschbare selbst erstellte Rollen. Die Aktion kann nicht rückgängig gemacht werden. Bist du sicher?",
-        embeds: [], components: [row]
-      });
     }
 
     if (action !== "apply" && action !== "finalreplace") return;
