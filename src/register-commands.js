@@ -30,6 +30,10 @@ const commands = [
         .setMaxLength(4000)
     ),
 
+  new SlashCommandBuilder().setName("serverstatus").setDescription("Zeigt den aktuellen Minecraft-Serverstatus"),
+  new SlashCommandBuilder().setName("beforderung").setDescription("Beantragt eine Team-Beförderung mit Freigabe")
+    .addUserOption(o => o.setName("mitglied").setDescription("Teammitglied").setRequired(true))
+    .addStringOption(o => o.setName("grund").setDescription("Begründung der Beförderung").setRequired(true).setMaxLength(1000)),
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
   new SlashCommandBuilder().setName("bewerbung-panel").setDescription("Veröffentlicht das Team-Bewerbungsformular"),
   new SlashCommandBuilder().setName("whitelist-panel").setDescription("Veröffentlicht das Minecraft-Whitelist-Formular"),
