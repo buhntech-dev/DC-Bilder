@@ -15,7 +15,14 @@ for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   }
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers] });
+// GuildMembers ist ein privilegierter Discord-Intent und bleibt standardmäßig aus,
+// damit der Bot auch ohne Freischaltung im Developer Portal zuverlässig startet.
+// Nur aktivieren, wenn "Server Members Intent" im Developer Portal eingeschaltet ist.
+const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
+if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
+  intents.push(GatewayIntentBits.GuildMembers);
+}
+const client = new Client({ intents });
 const pendingPlans = new Map();
 
 function isOwner(interaction) {
