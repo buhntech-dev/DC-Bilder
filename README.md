@@ -57,7 +57,7 @@ npm run check
 
 ## Grenzen
 - `/website` erzeugt eine HTML-Datei. Sie wird nicht automatisch öffentlich gehostet.
-- Backups liegen als JSON-Dateianhang im privaten Kanal `#backup-archiv`. Sie sichern Rollen und Kanalstruktur, nicht Chatverläufe oder Mitgliedsrollen. Wiederherstellung legt fehlende Rollen/Kanäle neu an und löscht oder überschreibt keine vorhandenen Elemente.
+- Vor jedem bestätigten Server-Neuaufbau und vor `/server-leeren` wird automatisch ein Sicherheitsbackup erstellt. Backups liegen als JSON-Dateianhang im privaten Kanal `#backup-archiv`. Sie sichern Rollen und Kanalstruktur, nicht Chatverläufe oder Mitgliedsrollen. Wiederherstellung legt fehlende Rollen/Kanäle neu an und löscht oder überschreibt keine vorhandenen Elemente.
 - `/profimine` und `/minecraft` ersetzen nach doppelter Bestätigung vorhandene löschbare Kanäle und Rollen. System-, Integrations- und Bot-Rollen bleiben erhalten.
 - Whitelist-Annahmen ändern den Discord-Nickname und vergeben die Discord-Rolle. Eine externe Aternos-Whitelist wird nur dann automatisch geändert, wenn der Minecraft-Server RCON unterstützt und `RCON_PASSWORD` konfiguriert ist; andernfalls ist die Eintragung im Serverpanel manuell erforderlich.
 - Die Website und Serverlayouts verwenden Beispielangaben. Prüfe insbesondere die Minecraft-Adresse vor der Veröffentlichung.
