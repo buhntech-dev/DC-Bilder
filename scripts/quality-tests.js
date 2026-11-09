@@ -8,6 +8,7 @@ const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
 const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
+const { searchRegisteredPlayers } = require("../src/player-registry");
 const { createSupportChime } = require("../src/support-voice");
 const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
 const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
@@ -335,6 +336,70 @@ async function test(name, fn) {
     const wipe = source.indexOf('createGuildBackup(guild, "Sicherheitsbackup vor /server-leeren")');
     const deletion = source.indexOf('channel.delete("Serverinhaber hat /server-leeren bestätigt")');
     assert.ok(wipe >= 0 && deletion > wipe);
+  });
+
+
+  await test("Leere Spielersuche wird abgelehnt", async () => await assert.rejects(() => searchRegisteredPlayers(null, "   "), /Suche/i));
+  await test("Backup-Wiederherstellung legt fehlende Rollen und Kanäle an", async () => {
+    const { Collection, ChannelType } = require("discord.js");
+    const snapshot = {
+      format: "discord-server-builder-backup-v1",
+      guildId: "restore-guild",
+      roles: [{ name: "Owner", color: "#ff0000", hoist: true, mentionable: false, permissions: "8", position: 2 }],
+      channels: [
+        { name: "START", type: ChannelType.GuildCategory, parentName: null, topic: "", overwrites: [] },
+        { name: "regeln", type: ChannelType.GuildText, parentName: "START", topic: "Regeln", overwrites: [{ roleName: "@everyone", allow: "0", deny: "1024" }] }
+      ]
+    };
+    const roles = new Collection();
+    roles.set("restore-guild", { id: "restore-guild", name: "@everyone" });
+    let roleId = 0, channelId = 0, ownerAssigned = false;
+    const ownerMember = {
+      roles: {
+        cache: new Collection(),
+        async add(role) { this.cache.set(role.id, role); ownerAssigned = true; }
+      }
+    };
+    const backupMessage = {
+      author: { id: "bot" },
+      attachments: new Collection([["file", { url: "https://example.invalid/backup.json" }]])
+    };
+    const backupChannel = {
+      id: "backup-channel", name: "backup-archiv", type: ChannelType.GuildText,
+      messages: { async fetch() { return backupMessage; } }
+    };
+    const channels = new Collection([[backupChannel.id, backupChannel]]);
+    const guild = {
+      id: "restore-guild", ownerId: "owner-id", client: { user: { id: "bot" } },
+      roles: {
+        cache: roles,
+        async fetch() { return roles; },
+        async create(options) {
+          const role = { id: "role-" + (++roleId), name: options.name };
+          roles.set(role.id, role);
+          return role;
+        }
+      },
+      channels: {
+        cache: channels,
+        async fetch() { return channels; },
+        async create(options) {
+          const channel = { id: "channel-" + (++channelId), ...options, parentId: options.parent || null };
+          channels.set(channel.id, channel);
+          return channel;
+        }
+      },
+      members: { async fetch() { return ownerMember; } }
+    };
+    const originalFetch = global.fetch;
+    global.fetch = async () => ({ ok: true, async json() { return snapshot; } });
+    try {
+      const result = await restoreGuildBackup(guild, "backup-message-id");
+      assert.deepEqual(result, { rolesCreated: 1, categoriesCreated: 1, channelsCreated: 1, sourceMessageId: "backup-message-id" });
+      assert.equal(ownerAssigned, true);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
