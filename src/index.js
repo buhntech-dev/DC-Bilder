@@ -171,7 +171,7 @@ client.on("interactionCreate", async interaction => {
       try {
         const guild = interaction.guild;
         await guild.channels.fetch();
-        const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+        const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands", "backup-archiv", "backups", "papierkorb"]);
         const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
         const keepChannels = guild.channels.cache.filter(ch =>
           keepNames.has(ch.name.toLowerCase()) || communityKeepIds.has(ch.id)
