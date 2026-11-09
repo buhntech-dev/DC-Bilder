@@ -120,7 +120,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   await guild.channels.fetch();
   await guild.roles.fetch();
-  const keepCommandNamesForCheck = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+  const keepCommandNamesForCheck = new Set(["bot-commands", "bot-befehle", "botcommands", "backup-archiv", "backups", "papierkorb"]);
   const communityKeepIdsForCheck = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
   const keptChannels = guild.channels.cache.filter(channel =>
     keepCommandNamesForCheck.has(channel.name.toLowerCase()) ||
