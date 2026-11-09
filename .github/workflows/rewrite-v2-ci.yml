@@ -20,6 +20,6 @@ jobs:
           node-version: 24
           cache: npm
       - name: Abhängigkeiten installieren
-        run: npm ci
+        run: npm install
       - name: Syntax-, Preset-, Mock- und Featuretests
         run: npm test
