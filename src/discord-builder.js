@@ -400,7 +400,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 function rolePermissions(name) {
   const p = PermissionFlagsBits;
   if (["owner", "inhaber"].includes(String(name).toLowerCase())) return [p.Administrator];
-  if (["management", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
+  if (["management", "teamleitung", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
     return [
       p.ManageChannels, p.ManageRoles, p.ManageMessages,
       p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
@@ -418,7 +418,7 @@ function rolePermissions(name) {
 function buildChannelOverwrites(guild, names, roleMap, ownerId) {
   const roleNames = new Set((names || []).map(name => String(name).toLowerCase()));
   // Höhere Stufen der Teamleiter erhalten automatisch dieselben privaten Bereiche.
-  if (roleNames.has("administrator")) roleNames.add("senior administrator");
+  if (roleNames.has("management")) roleNames.add("teamleitung");\n  if (roleNames.has("administrator")) roleNames.add("senior administrator");
   if (roleNames.has("moderator")) roleNames.add("senior moderator");
   if (roleNames.has("supporter")) {
     roleNames.add("senior supporter");
