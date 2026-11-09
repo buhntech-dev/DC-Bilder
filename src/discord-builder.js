@@ -10,20 +10,6 @@ function validColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#5865F2";
 }
 
-async function withTimeout(promise, milliseconds, label) {
-  let timer;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(label + " hat das Zeitlimit von " + Math.round(milliseconds / 1000) + " Sekunden überschritten.")), milliseconds);
-      })
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
 async function applyServerPlan(guild, plan, options = {}) {
   const createdRoles = new Map();
   const created = {
@@ -145,11 +131,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     await updateProgress("Neue Rollen", "Erstelle " + name + " (" + (index + 1) + "/" + totalRoles + ")", 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
     try {
       const permissions = rolePermissions(name);
-      const createdRole = await withTimeout(guild.roles.create({
+      console.log("[SERVER-BUILD] Erstelle Rolle:", name);
+      const createdRole = await guild.roles.create({
         name, colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) }, hoist: Boolean(role.hoist),
         mentionable: Boolean(role.mentionable), permissions,
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-      }), 20000, "Erstellen der Rolle " + name);
+      });
+      console.log("[SERVER-BUILD] Rolle erstellt:", name, createdRole.id);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
