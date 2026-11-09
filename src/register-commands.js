@@ -15,6 +15,12 @@ const commands = [
     .setName("minecraft")
     .setDescription("Erstellt den vorgefertigten Minecraft-Discord-Server"),
   new SlashCommandBuilder()
+    .setName("profimine")
+    .setDescription("Erstellt ProfiMine Ultimate mit erweitertem Minecraft-Discord"),
+  new SlashCommandBuilder()
+    .setName("website")
+    .setDescription("Erstellt eine moderne Minecraft-Server-Website als HTML-Datei"),
+  new SlashCommandBuilder()
     .setName("plan")
     .setDescription("Erstellt einen Serverplan, ohne etwas am Server zu ändern")
     .addStringOption(option =>
@@ -54,7 +60,7 @@ async function main() {
   }
   const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
   await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-  console.log("Slash-Befehle /build, /plan und /minecraft wurden registriert.");
+  console.log("Slash-Befehle registriert: /build, /plan, /minecraft, /profimine, /website und Verwaltung.");
 }
 main().catch(error => {
   console.error(error);
