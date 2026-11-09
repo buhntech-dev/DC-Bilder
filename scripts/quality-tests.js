@@ -470,7 +470,7 @@ async function test(name, fn) {
     const OpusScript = require("opusscript");
     const encoder = new OpusScript(48000, 2, OpusScript.Application.AUDIO);
     try {
-      const encoded = encoder.encode(createSupportChime().subarray(0, 3840));
+      const encoded = encoder.encode(createSupportChime().subarray(0, 3840), 960);
       assert.ok(encoded && encoded.length > 0);
     } finally {
       encoder.delete();
