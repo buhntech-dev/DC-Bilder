@@ -154,7 +154,15 @@ async function restoreGuildBackup(guild, backupMessageId) {
     roleMap.set(key, role);
     rolesCreated++;
   }
+  const ownerRole = roleMap.get("owner") || roleMap.get("inhaber");
+  if (ownerRole) {
+    const ownerMember = await guild.members.fetch(guild.ownerId).catch(() => null);
+    if (ownerMember && !ownerMember.roles.cache.has(ownerRole.id)) {
+      await ownerMember.roles.add(ownerRole, "Serverinhaber aus Discord-Backup wiederherstellen");
+    }
+  }
   const channelMap = new Map();
+  let categoriesCreated = 0;
   for (const saved of snapshot.channels.filter(item => item.type === ChannelType.GuildCategory)) {
     const existing = guild.channels.cache.find(item => item.type === ChannelType.GuildCategory && item.name === saved.name);
     if (existing) channelMap.set(saved.name, existing);
@@ -164,6 +172,7 @@ async function restoreGuildBackup(guild, backupMessageId) {
         reason: "Discord-Backup wiederherstellen"
       });
       channelMap.set(saved.name, created);
+      categoriesCreated++;
     }
   }
   let channelsCreated = 0;
