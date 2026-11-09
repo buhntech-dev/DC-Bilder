@@ -199,6 +199,40 @@ client.on("interactionCreate", async interaction => {
   }
   if (interaction.isChatInputCommand()) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
+
+    // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
+    // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
+    if (interaction.commandName === "minecraft") {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        if (!isOwner(interaction)) {
+          return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
+        }
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ||
+            !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
+          return interaction.editReply("Dir fehlen die Berechtigungen **Kanäle verwalten** und **Rollen verwalten**.");
+        }
+        const plan = createMinecraftPreset();
+        const key = `${interaction.guildId}:${interaction.user.id}`;
+        pendingPlans.set(key, { plan, replaceServer: true, createdAt: Date.now() });
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`reviewreplace:${interaction.user.id}`)
+            .setLabel("Kompletten Neuaufbau bestätigen")
+            .setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
+            .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
+        );
+        return interaction.editReply({
+          content: "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.",
+          embeds: [planEmbed(plan, true)], components: [row]
+        });
+      } catch (error) {
+        console.error("Fehler bei /minecraft:", error);
+        return interaction.editReply("Fehler bei /minecraft: " + String(error.message || error).slice(0, 700));
+      }
+    }
+
     const ownerOnly = ["build", "minecraft", "plan", "server-leeren"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.reply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
     if (interaction.commandName === "server-leeren") {
