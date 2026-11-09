@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "register": "node src/register-commands.js",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "predeploy": "npm run check && npm run register"
   },
   "engines": {
     "node": ">=24.17.0"
