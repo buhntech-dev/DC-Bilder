@@ -80,9 +80,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     role.id !== guild.id && !role.managed && role.id !== botMemberForCheck.roles.highest.id &&
     role.comparePositionTo(botMemberForCheck.roles.highest) < 0
   );
-  const projectedChannels = preservedChannelCount + plan.categories.length +
+  const existingChannelsAfterMode = options.replaceServer === true ? preservedChannelCount : guild.channels.cache.size;
+  const existingRolesAfterMode = options.replaceServer === true
+    ? guild.roles.cache.size - deletableRoles.length
+    : guild.roles.cache.size;
+  const projectedChannels = existingChannelsAfterMode + plan.categories.length +
     plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
-  const projectedRoles = guild.roles.cache.size - deletableRoles.length + plan.roles.length;
+  const projectedRoles = existingRolesAfterMode + plan.roles.length;
   if (projectedChannels > 500) throw new Error("Der Neuaufbau würde Discords Limit von 500 Kanälen überschreiten. Es wurde nichts gelöscht.");
   if (projectedRoles > 250) throw new Error("Der Neuaufbau würde Discords Limit von 250 Rollen überschreiten. Es wurde nichts gelöscht.");
 
