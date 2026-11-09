@@ -120,7 +120,7 @@ async function handleApplicationInteraction(interaction) {
     return true;
   }
 
-  if (interaction.isButton() && /^(application|whitelist)_(accept|reject):\d+$/.test(interaction.customId)) {
+  if (interaction.isButton() && /^(application)_(accept|reject|interview):\d+$|^(whitelist)_(accept|reject):\d+$/.test(interaction.customId)) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     if (!await isReviewer(interaction)) {
       await interaction.editReply("Nur Owner, Management oder Administratoren dürfen Anträge bearbeiten.");
