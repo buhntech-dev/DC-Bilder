@@ -1,10 +1,11 @@
 require("dotenv").config();
 const {
   Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, EmbedBuilder,
-  ActionRowBuilder, ButtonBuilder, ButtonStyle
+  ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
-const { createMinecraftPreset } = require("./minecraft-preset");
+const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-preset");
+const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
 
@@ -213,12 +214,12 @@ client.on("interactionCreate", async interaction => {
 
     // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
     // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
-    if (interaction.commandName === "minecraft") {
+    if (["minecraft", "profimine"].includes(interaction.commandName)) {
       try {
         if (!isOwner(interaction)) {
           return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
         }
-        const plan = createMinecraftPreset();
+        const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : createMinecraftPreset();
         const key = `${interaction.guildId}:${interaction.user.id}`;
         pendingPlans.set(key, { plan, replaceServer: true, createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
@@ -230,7 +231,7 @@ client.on("interactionCreate", async interaction => {
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
         return interaction.editReply({
-          content: "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.",
+          content: interaction.commandName === "profimine" ? "Prüfe ProfiMine Ultimate. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung." : "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.",
           embeds: [planEmbed(plan, true)], components: [row]
         });
       } catch (error) {
@@ -239,8 +240,19 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    const ownerOnly = ["build", "minecraft", "plan", "server-leeren"].includes(interaction.commandName);
+    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
+    if (interaction.commandName === "website") {
+      try {
+        const html = buildWebsiteHtml(interaction.guild.name);
+        const file = new AttachmentBuilder(Buffer.from(html, "utf8"), { name: "minecraft-website.html" });
+        await interaction.channel.send({ content: "🌐 **Deine Website ist fertig.** Die HTML-Datei kannst du herunterladen und bei einem Webhoster veröffentlichen.", files: [file] });
+        return interaction.editReply("✅ Website wurde als HTML-Datei erstellt und im aktuellen Kanal veröffentlicht.");
+      } catch (error) {
+        console.error("Website-Erstellung fehlgeschlagen:", error);
+        return interaction.editReply("Website konnte nicht erstellt werden: " + String(error.message || error).slice(0, 500));
+      }
+    }
     if (interaction.commandName === "server-leeren") {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("serverwipe_confirm:" + interaction.user.id)
@@ -333,24 +345,27 @@ client.on("interactionCreate", async interaction => {
     }
     try {
       const isMinecraft = interaction.commandName === "minecraft";
+      const isProfiMine = interaction.commandName === "profimine";
       const plan = isMinecraft
         ? createMinecraftPreset()
-        : await createServerPlan(interaction.options.getString("prompt", true));
+        : isProfiMine
+          ? createProfiMinePreset()
+          : await createServerPlan(interaction.options.getString("prompt", true));
       if (interaction.commandName === "plan") return interaction.editReply({ embeds: [planEmbed(plan)] });
 
       const key = `${interaction.guildId}:${interaction.user.id}`;
-      pendingPlans.set(key, { plan, replaceServer: isMinecraft, createdAt: Date.now() });
+      pendingPlans.set(key, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${isMinecraft ? "reviewreplace" : "apply"}:${interaction.user.id}`)
-          .setLabel(isMinecraft ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
-          .setStyle(isMinecraft ? ButtonStyle.Danger : ButtonStyle.Success),
+          .setCustomId(`${(isMinecraft || isProfiMine) ? "reviewreplace" : "apply"}:${interaction.user.id}`)
+          .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
+          .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
           .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
-        content: isMinecraft
-          ? "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung."
+        content: (isMinecraft || isProfiMine)
+          ? (isProfiMine ? "Prüfe ProfiMine Ultimate. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung." : "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.")
           : "Dein Serverplan ist fertig. Prüfe ihn und bestätige die Umsetzung:",
         embeds: [planEmbed(plan, isMinecraft)], components: [row]
       });
