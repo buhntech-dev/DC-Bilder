@@ -30,11 +30,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     progressMessage = await progressChannel.send("📊 **Serveraufbau gestartet**\nVorbereitung …\n0%");
   } catch (error) {
     console.warn("Fortschrittsanzeige konnte nicht erstellt werden:", error.message);
+    if (progressChannel) {
+      await progressChannel.delete("Fehler beim Start der Fortschrittsanzeige").catch(() => {});
+    }
     throw new Error("Der Fortschrittskanal konnte nicht erstellt werden. Prüfe die Berechtigung 'Kanäle verwalten'. " + error.message);
   }
   try {
   let lastProgressEdit = 0;
-  let lastProgressPercent = -1;
   const updateProgress = async (stage, detail, percent) => {
     const now = Date.now();
     // Discord-Message-Edits drosseln: der Serveraufbau darf nicht auf die
@@ -42,11 +44,10 @@ async function applyServerPlan(guild, plan, options = {}) {
     if (percent < 100 && now - lastProgressEdit < 1100) return;
     const filled = Math.max(0, Math.min(10, Math.round(percent / 10)));
     const bar = "🟩".repeat(filled) + "⬜".repeat(10 - filled);
-    const content = "📊 **Serveraufbau – Live-Fortschritt**\\n**" + stage + "**\\n" + detail + "\\n" + bar + " **" + percent + "%**";
+    const content = ["📊 **Serveraufbau – Live-Fortschritt**", "**" + stage + "**", detail, bar + " **" + percent + "%**"].join("\\n");
     try {
       await progressMessage.edit(content);
       lastProgressEdit = Date.now();
-      lastProgressPercent = percent;
     } catch (error) {
       console.warn("Fortschritt konnte nicht aktualisiert werden:", error.message);
     }
