@@ -116,4 +116,52 @@ function createMinecraftPreset() {
   };
 }
 
-module.exports = { createMinecraftPreset };
+
+function createProfiMinePreset() {
+  const base = createMinecraftPreset();
+  base.serverName = "ProfiMine Ultimate";
+  base.summary = "ProfiMine Ultimate: erweiterter Minecraft-Community-Discord mit Rängen, Wirtschaft, Clans, Events, Creator-Hub, Bewerbungen und Teamverwaltung.";
+  base.roles.push(
+    { name: "Premium", color: "#F1C40F", hoist: true, mentionable: false },
+    { name: "MVP", color: "#3498DB", hoist: true, mentionable: false },
+    { name: "Elite", color: "#9B59B6", hoist: true, mentionable: false },
+    { name: "Legend", color: "#E74C3C", hoist: true, mentionable: false },
+    { name: "Event-Team", color: "#1ABC9C", hoist: true, mentionable: false },
+    { name: "Creator", color: "#E91E63", hoist: true, mentionable: false },
+    { name: "Partner", color: "#16A085", hoist: true, mentionable: false },
+    { name: "Builder+", color: "#D35400", hoist: true, mentionable: false }
+  );
+  base.categories.push(
+    cat("💎 RÄNGE & FORTSCHRITT", [
+      ch("🏆・rang-übersicht", "Alle Minecraft-Ränge und Vorteile"),
+      ch("🎁・rang-belohnungen", "Belohnungen und Rang-Upgrades"),
+      ch("⭐・premium-lounge", "Austausch für Premium-Spieler", ["Premium", "MVP", "Elite", "Legend"])
+    ]),
+    cat("💰 WIRTSCHAFT & MARKT", [
+      ch("💰・wirtschaft", "Wirtschaft, Geld und Handel"),
+      ch("🛒・markt", "Spielerangebote und Gesuche"),
+      ch("🔨・jobs", "Jobs und Aufgaben"),
+      ch("🏦・auktionen", "Auktionen und Versteigerungen")
+    ]),
+    cat("⚔️ CLANS & EVENTS", [
+      ch("🛡️・clans", "Clans und Teams"),
+      ch("📣・clan-rekrutierung", "Mitglieder für Clans suchen"),
+      ch("🎉・event-anmeldungen", "Anmeldungen für Community-Events"),
+      ch("🏅・turniere", "Turniere und Wettbewerbe"),
+      ch("🎙️・event-besprechung", "Interner Event-Team-Bereich", ["Event-Team", "Management", "Administrator"], "voice")
+    ]),
+    cat("🎥 CREATOR & PARTNER", [
+      ch("🎬・creator-hub", "Videos, Streams und Creator-News"),
+      ch("🤝・partner", "Offizielle Partner und Kooperationen"),
+      ch("📸・creator-media", "Creator-Medien und Veröffentlichungen")
+    ]),
+    cat("🛠️ DOWNLOADS & WIKI", [
+      ch("🌐・website", "Offizielle Website und wichtige Links"),
+      ch("📥・downloads", "Downloads und Ressourcen"),
+      ch("📚・wiki", "Anleitungen und Server-Wissen")
+    ])
+  );
+  return base;
+}
+
+module.exports = { createMinecraftPreset, createProfiMinePreset };
