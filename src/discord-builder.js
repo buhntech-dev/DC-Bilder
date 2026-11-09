@@ -10,6 +10,20 @@ function validColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#5865F2";
 }
 
+async function withTimeout(promise, milliseconds, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label + " hat das Zeitlimit von " + Math.round(milliseconds / 1000) + " Sekunden überschritten.")), milliseconds);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function applyServerPlan(guild, plan, options = {}) {
   const createdRoles = new Map();
   const created = {
@@ -67,7 +81,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     if (percent < 100 && now - lastProgressEdit < 1100) return;
     const filled = Math.max(0, Math.min(10, Math.round(percent / 10)));
     const bar = "🟩".repeat(filled) + "⬜".repeat(10 - filled);
-    const content = ["📊 **Serveraufbau – Live-Fortschritt**", "**" + stage + "**", detail, bar + " **" + percent + "%**"].join("\\n");
+    const content = ["📊 **Serveraufbau – Live-Fortschritt**", "**" + stage + "**", detail, bar + " **" + percent + "%**"].join("\n");
     try {
       await progressMessage.edit(content);
       lastProgressEdit = Date.now();
@@ -131,11 +145,11 @@ async function applyServerPlan(guild, plan, options = {}) {
     await updateProgress("Neue Rollen", "Erstelle " + name + " (" + (index + 1) + "/" + totalRoles + ")", 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
     try {
       const permissions = rolePermissions(name);
-      const createdRole = await guild.roles.create({
+      const createdRole = await withTimeout(guild.roles.create({
         name, colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) }, hoist: Boolean(role.hoist),
         mentionable: Boolean(role.mentionable), permissions,
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-      });
+      }), 20000, "Erstellen der Rolle " + name);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
@@ -251,7 +265,7 @@ async function applyServerPlan(guild, plan, options = {}) {
             "**10. Teamentscheidungen** – Moderationsentscheidungen sind zu respektieren. Beschwerden bitte sachlich per Ticket einreichen.",
             "",
             "Mit der Bestätigung in **#bestätigung** erklärst du, dass du diese Regeln gelesen hast und akzeptierst. Verstöße können Verwarnungen, Timeouts, Kicks oder Banns zur Folge haben."
-          ].join("\\n"))
+          ].join("\n"))
           .setFooter({ text: "Minecraft Community • Bitte halte dich an die Regeln" });
         await createdChannel.send({ embeds: [rulesEmbed] });
       }
