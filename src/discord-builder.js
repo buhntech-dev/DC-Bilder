@@ -259,10 +259,11 @@ async function applyServerPlan(guild, plan, options = {}) {
   }
 
   // Der auslösende Serverinhaber erhält die Owner-Rolle automatisch.
-  if (options.ownerId && createdRoles.has("owner")) {
+  const ownerRole = createdRoles.get("owner") || createdRoles.get("inhaber");
+  if (options.ownerId && ownerRole) {
     try {
       const ownerMember = await guild.members.fetch(options.ownerId);
-      await ownerMember.roles.add(createdRoles.get("owner"), "Minecraft-Server wurde vom Inhaber neu aufgebaut");
+      await ownerMember.roles.add(ownerRole, "Discord-Server wurde vom Inhaber aufgebaut");
     } catch (error) {
       created.failedItems++;
       created.errors.push("Owner-Rolle: " + String(error.message || error));
@@ -377,17 +378,17 @@ async function applyServerPlan(guild, plan, options = {}) {
 
 function rolePermissions(name) {
   const p = PermissionFlagsBits;
-  if (name === "Owner") return [p.Administrator];
-  if (["Management", "Administrator", "Senior Administrator"].includes(name)) {
+  if (["owner", "inhaber"].includes(String(name).toLowerCase())) return [p.Administrator];
+  if (["management", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
     return [
       p.ManageChannels, p.ManageRoles, p.ManageMessages,
       p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
     ];
   }
-  if (["Moderator", "Senior Moderator"].includes(name)) {
+  if (["moderator", "senior moderator"].includes(String(name).toLowerCase())) {
     return [p.ManageMessages, p.ModerateMembers, p.KickMembers];
   }
-  if (["Supporter", "Senior Supporter"].includes(name)) {
+  if (["supporter", "senior supporter", "test support"].includes(String(name).toLowerCase())) {
     return [p.ManageMessages];
   }
   return [];
@@ -437,4 +438,4 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId) {
   return overwrites;
 }
 
-module.exports = { applyServerPlan, resetActiveBuilds };
+module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites };
