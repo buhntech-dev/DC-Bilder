@@ -31,6 +31,8 @@ const commands = [
     ),
 
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
+  new SlashCommandBuilder().setName("bewerbung-panel").setDescription("Veröffentlicht das Team-Bewerbungsformular"),
+  new SlashCommandBuilder().setName("whitelist-panel").setDescription("Veröffentlicht das Minecraft-Whitelist-Formular"),
   new SlashCommandBuilder().setName("clear").setDescription("Löscht Nachrichten im aktuellen Kanal")
     .addIntegerOption(o => o.setName("anzahl").setDescription("Anzahl (1-100)").setMinValue(1).setMaxValue(100).setRequired(true)),
   new SlashCommandBuilder().setName("kick").setDescription("Entfernt ein Mitglied vom Server")
