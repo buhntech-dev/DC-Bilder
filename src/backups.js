@@ -190,7 +190,7 @@ async function restoreGuildBackup(guild, backupMessageId) {
     await guild.channels.create(options);
     channelsCreated++;
   }
-  return { rolesCreated, channelsCreated, sourceMessageId: backupMessageId };
+  return { rolesCreated, categoriesCreated, channelsCreated, sourceMessageId: backupMessageId };
 }
 
 function startWeeklyBackups(client) {
