@@ -31,7 +31,7 @@ In Railway unter Variables setzen:
 **Wichtig:** Keine echten Tokens in GitHub-Dateien speichern. Wenn ein Token versehentlich veröffentlicht wurde, im Discord Developer Portal zurücksetzen und Railway aktualisieren.
 
 ## Discord-Berechtigungen
-Der Bot benötigt mindestens Kanäle verwalten, Rollen verwalten, Nachrichten senden und Nachrichtenverlauf lesen. Für Moderationsbefehle zusätzlich die entsprechenden Moderationsrechte; für Support-Voice Kanal ansehen und Verbinden.
+Der Bot benötigt mindestens Kanäle verwalten, Rollen verwalten, Nachrichten senden und Nachrichtenverlauf lesen. Für Moderationsbefehle zusätzlich die entsprechenden Moderationsrechte; für Whitelist-Nickname-Änderungen außerdem Nicknames verwalten; für Support-Voice Kanal ansehen und Verbinden.
 
 Die Bot-Integrationsrolle muss über den Rollen stehen, die der Bot verwalten soll. Discord-Systemrollen und verwaltete Integrationsrollen können nicht gelöscht werden.
 
