@@ -154,26 +154,27 @@ client.on("interactionCreate", async interaction => {
   }
 
   if (interaction.isButton() && (interaction.customId === "admin_duty_on" || interaction.customId === "admin_duty_off")) {
+    await interaction.deferReply({ ephemeral: true });
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const authorized = member.permissions.has(PermissionFlagsBits.Administrator) || ["Owner", "Management", "Administrator"].some(name => member.roles.cache.some(role => role.name === name));
-      if (!authorized) return interaction.reply({ content: "Nur Owner, Management und Administratoren können ihren Dienststatus ändern.", ephemeral: true });
+      if (!authorized) return interaction.editReply("Nur Owner, Management und Administratoren können ihren Dienststatus ändern.");
       const onRole = interaction.guild.roles.cache.find(role => role.name === "Admin im Dienst");
       const offRole = interaction.guild.roles.cache.find(role => role.name === "Admin außer Dienst");
-      if (!onRole || !offRole) return interaction.reply({ content: "Dienstrollen fehlen. Bitte /minecraft erneut aufbauen.", ephemeral: true });
+      if (!onRole || !offRole) return interaction.editReply("Dienstrollen fehlen. Bitte /minecraft erneut aufbauen.");
       if (interaction.customId === "admin_duty_on") {
         await member.roles.remove(offRole).catch(() => {});
         await member.roles.add(onRole, "Admin beginnt Dienst");
         await sendLog(interaction.guild, "🟢 **Admin im Dienst:** " + interaction.user.tag + " (`" + interaction.user.id + "`)");
-        return interaction.reply({ content: "🟢 Du bist jetzt im Dienst.", ephemeral: true });
+        return interaction.editReply("🟢 Du bist jetzt im Dienst.");
       }
       await member.roles.remove(onRole).catch(() => {});
       await member.roles.add(offRole, "Admin beendet Dienst");
       await sendLog(interaction.guild, "⚪ **Admin außer Dienst:** " + interaction.user.tag + " (`" + interaction.user.id + "`)");
-      return interaction.reply({ content: "⚪ Du bist jetzt außer Dienst.", ephemeral: true });
+      return interaction.editReply("⚪ Du bist jetzt außer Dienst.");
     } catch (error) {
       console.error("Admin-Dienststatus:", error);
-      return interaction.reply({ content: "Dienststatus fehlgeschlagen. Prüfe Rollen verwalten und die Rollenposition des Bots.", ephemeral: true });
+      return interaction.editReply("Dienststatus fehlgeschlagen. Prüfe Rollen verwalten und die Rollenposition des Bots.");
     }
   }
   if (interaction.isButton() && interaction.customId === "ticket_open") {
@@ -324,21 +325,22 @@ client.on("interactionCreate", async interaction => {
   }
 
   if (interaction.isButton() && interaction.customId === "minecraft_verify_member") {
+    await interaction.deferReply({ ephemeral: true });
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const memberRole = interaction.guild.roles.cache.find(role => role.name === "Mitglied");
       if (!memberRole) {
-        return interaction.reply({ content: "Die Rolle **Mitglied** wurde nicht gefunden. Bitte informiere das Serverteam.", ephemeral: true });
+        return interaction.editReply("Die Rolle **Mitglied** wurde nicht gefunden. Bitte informiere das Serverteam.");
       }
       if (member.roles.cache.has(memberRole.id)) {
-        return interaction.reply({ content: "Du bist bereits bestätigt. Viel Spaß auf dem Server!", ephemeral: true });
+        return interaction.editReply("Du bist bereits bestätigt. Viel Spaß auf dem Server!");
       }
       await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
       await sendRuleLog(interaction.guild, "✅ **Regel akzeptiert:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln bestätigt und die Rolle **Mitglied** erhalten.");
-      return interaction.reply({ content: "✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!", ephemeral: true });
+      return interaction.editReply("✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!");
     } catch (error) {
       console.error("Fehler bei Minecraft-Verifizierung:", error);
-      return interaction.reply({ content: "Die Bestätigung ist fehlgeschlagen. Bitte prüfe, ob der Bot **Rollen verwalten** besitzt und seine Bot-Rolle über der Rolle **Mitglied** steht.", ephemeral: true });
+      return interaction.editReply("Die Bestätigung ist fehlgeschlagen. Bitte prüfe, ob der Bot **Rollen verwalten** besitzt und seine Bot-Rolle über der Rolle **Mitglied** steht.");
     }
   }
 
