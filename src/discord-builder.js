@@ -1,5 +1,7 @@
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
+const activeBuildGuilds = new Set();
+
 function cleanName(value, fallback) {
   const name = String(value || fallback).trim().slice(0, 90);
   return name || fallback;
@@ -27,12 +29,21 @@ async function applyServerPlan(guild, plan, options = {}) {
   if (!botMemberForCheck.permissions.has(PermissionFlagsBits.Administrator) &&
       !botMemberForCheck.permissions.has(PermissionFlagsBits.ManageRoles)) missing.push("Rollen verwalten");
   if (missing.length) throw new Error("Dem Bot fehlen vor dem Aufbau diese Rechte: " + missing.join(" und ") + ". Es wurde nichts gelöscht.");
+  if (activeBuildGuilds.has(guild.id)) throw new Error("Auf diesem Discord läuft bereits ein Serveraufbau. Bitte warte, bis er abgeschlossen ist.");
+  activeBuildGuilds.add(guild.id);
 
   let progressChannel = null;
   let progressMessage = null;
   let completedRoles = 0;
   let completedChannels = 0;
   try {
+    await guild.channels.fetch();
+    const staleProgressChannels = guild.channels.cache.filter(channel =>
+      channel.type === ChannelType.GuildText && channel.name === "📊・fortschritt"
+    );
+    for (const stale of staleProgressChannels.values()) {
+      await stale.delete("Veralteten Fortschrittskanal vor neuem Aufbau entfernen").catch(() => {});
+    }
     progressChannel = await guild.channels.create({
       name: "📊・fortschritt", type: ChannelType.GuildText,
       topic: "Temporärer Fortschrittskanal für den Serveraufbau",
@@ -44,6 +55,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     if (progressChannel) {
       await progressChannel.delete("Fehler beim Start der Fortschrittsanzeige").catch(() => {});
     }
+    activeBuildGuilds.delete(guild.id);
     throw new Error("Der Fortschrittskanal konnte nicht erstellt werden. Prüfe die Berechtigung 'Kanäle verwalten'. " + error.message);
   }
   try {
@@ -294,6 +306,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       await progressChannel.delete("Temporärer Fortschrittskanal nach Abschluss oder Abbruch entfernen")
         .catch(error => console.warn("Fortschrittskanal konnte nicht gelöscht werden:", error.message));
     }
+    activeBuildGuilds.delete(guild.id);
   }
 }
 
