@@ -9,6 +9,8 @@ const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
+const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
+const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -153,6 +155,7 @@ client.on("interactionCreate", async interaction => {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   }
   if (await handleApplicationInteraction(interaction)) return;
+  if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
     const [action, ownerId] = interaction.customId.split(":");
@@ -280,6 +283,27 @@ client.on("interactionCreate", async interaction => {
 
     const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen." });
+    if (interaction.commandName === "serverstatus") {
+      try {
+        const status = await updateGuildMinecraftStatus(interaction.guild);
+        if (!status) return interaction.editReply("Minecraft-Status konnte gerade nicht abgefragt werden. Bitte prüfe die Serveradresse und Railway-Logs.");
+        return interaction.editReply({
+          embeds: [statusEmbed(status, process.env.MINECRAFT_ADDRESS || DEFAULT_ADDRESS)]
+        });
+      } catch (error) {
+        return interaction.editReply("Minecraft-Status fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "beforderung") {
+      try {
+        const target = interaction.options.getMember("mitglied");
+        const reason = interaction.options.getString("grund", true);
+        return createPromotionRequest(interaction, target, reason);
+      } catch (error) {
+        console.error("Beförderungsantrag fehlgeschlagen:", error);
+        return interaction.editReply("Beförderungsantrag fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
     if (interaction.commandName === "website") {
       try {
         const html = buildWebsiteHtml(interaction.guild.name);
