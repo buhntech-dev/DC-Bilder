@@ -12,7 +12,7 @@ const TEAM_RANKS = [
   "Administrator",
   "Senior Administrator"
 ];
-const REVIEWER_ROLES = new Set(["owner", "management", "teamleitung", "senior administrator"]);
+const REVIEWER_ROLES = new Set(["owner", "management", "teamleitung"]);
 
 function hasTeamLeadAccess(member) {
   if (!member) return false;
