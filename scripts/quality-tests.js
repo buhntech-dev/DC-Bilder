@@ -5,6 +5,8 @@ const { createServerPlan } = require("../src/ai");
 const { buildWebsiteHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
+const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");
 
 let passed = 0;
 async function test(name, fn) {
@@ -140,7 +142,56 @@ async function test(name, fn) {
     assert.equal(row.components[0].custom_id, "application_open");
   });
 
-  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
+
+  await test("Minecraft-VarInt codiert Null", () => assert.deepEqual([...encodeVarInt(0)], [0]));
+  await test("Minecraft-VarInt codiert 127", () => assert.deepEqual([...encodeVarInt(127)], [127]));
+  await test("Minecraft-VarInt codiert 128", () => assert.deepEqual([...encodeVarInt(128)], [128, 1]));
+  await test("Minecraft-VarInt dekodiert 300", () => assert.deepEqual(decodeVarInt(encodeVarInt(300)), { value: 300, bytes: 2 }));
+  await test("Unvollständiger Minecraft-VarInt wird erkannt", () => assert.equal(decodeVarInt(Buffer.from([0x80])), null));
+  await test("Minecraft-Adresse nutzt konfigurierten Port", () => assert.deepEqual(parseMinecraftAddress("play.example.net:25570"), { host: "play.example.net", port: 25570 }));
+  await test("Minecraft-Adresse nutzt den bekannten Standardserver", () => assert.deepEqual(parseMinecraftAddress(DEFAULT_ADDRESS), { host: "Communety.aternos.me", port: 18884 }));
+  await test("Ungültiger Minecraft-Port wird abgelehnt", () => assert.throws(() => parseMinecraftAddress("example.net:70000"), /Port/i));
+  await test("Minecraft-Statusantwort wird korrekt gelesen", () => {
+    const json = Buffer.from(JSON.stringify({ version: { name: "1.21.4" }, players: { online: 3, max: 20 } }));
+    const response = Buffer.concat([encodeVarInt(0), encodeVarInt(json.length), json]);
+    const data = Buffer.concat([encodeVarInt(response.length), response]);
+    assert.deepEqual(parseStatusPacket(data), { online: true, version: "1.21.4", players: 3, maxPlayers: 20, description: "" });
+  });
+  await test("Unvollständige Minecraft-Statusantwort wartet auf weitere Daten", () => assert.equal(parseStatusPacket(Buffer.from([0x05, 0x00])), null));
+  await test("Offline-Status wird als rotes Embed ausgegeben", () => {
+    const embed = statusEmbed({ online: false, error: "Offline" }, DEFAULT_ADDRESS).toJSON();
+    assert.equal(embed.color, 0xe74c3c);
+    assert.ok(embed.fields.some(field => field.name === "Adresse"));
+  });
+  await test("Team-Rangfolge beginnt mit Test Support", () => assert.equal(TEAM_RANKS[0], "Test Support"));
+  await test("Team-Rangfolge endet mit Senior Administrator", () => assert.equal(TEAM_RANKS.at(-1), "Senior Administrator"));
+  await test("Team-Rangfolge enthält sieben Stufen", () => assert.equal(TEAM_RANKS.length, 7));
+  await test("Teammitglied-Rang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Test Support" }, { name: "Mitglied" }] } };
+    assert.equal(currentTeamRank(member), 0);
+  });
+  await test("Höchster Teamrang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Senior Administrator" }] } };
+    assert.equal(currentTeamRank(member), 6);
+  });
+  await test("Mitglied ohne Teamrang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(currentTeamRank(member), -1);
+  });
+  await test("Beförderungsbuttons enthalten Zielmitglied und Rang", () => {
+    const row = promotionRow("123456789012345678", 2).toJSON();
+    assert.equal(row.components[0].custom_id, "promotion_approve:123456789012345678:2");
+    assert.equal(row.components[1].custom_id, "promotion_reject:123456789012345678:2");
+  });
+  await test("Teamleitung darf Beförderungen prüfen", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Teamleitung" }] } };
+    assert.equal(hasTeamLeadAccess(member), true);
+  });
+  await test("Normales Mitglied darf keine Beförderungen prüfen", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(hasTeamLeadAccess(member), false);
+  });
+\n  if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
   console.error(error);
