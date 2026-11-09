@@ -32,50 +32,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   if (activeBuildGuilds.has(guild.id)) throw new Error("Auf diesem Discord läuft bereits ein Serveraufbau. Bitte warte, bis er abgeschlossen ist.");
   activeBuildGuilds.add(guild.id);
 
-  let progressChannel = null;
-  let progressMessage = null;
-  let completedRoles = 0;
-  let completedChannels = 0;
   try {
-    await guild.channels.fetch();
-    const staleProgressChannels = guild.channels.cache.filter(channel =>
-      channel.type === ChannelType.GuildText && channel.name === "📊・fortschritt"
-    );
-    for (const stale of staleProgressChannels.values()) {
-      await stale.delete("Veralteten Fortschrittskanal vor neuem Aufbau entfernen").catch(() => {});
-    }
-    progressChannel = await guild.channels.create({
-      name: "📊・fortschritt", type: ChannelType.GuildText,
-      topic: "Temporärer Fortschrittskanal für den Serveraufbau",
-      reason: "Live-Fortschritt des Discord Server Builders"
-    });
-    progressMessage = await progressChannel.send("📊 **Serveraufbau gestartet**\nVorbereitung …\n0%");
-  } catch (error) {
-    console.warn("Fortschrittsanzeige konnte nicht erstellt werden:", error.message);
-    if (progressChannel) {
-      await progressChannel.delete("Fehler beim Start der Fortschrittsanzeige").catch(() => {});
-    }
-    activeBuildGuilds.delete(guild.id);
-    throw new Error("Der Fortschrittskanal konnte nicht erstellt werden. Prüfe die Berechtigung 'Kanäle verwalten'. " + error.message);
-  }
-  try {
-  let lastProgressEdit = 0;
-  const updateProgress = async (stage, detail, percent) => {
-    const now = Date.now();
-    // Discord-Message-Edits drosseln: der Serveraufbau darf nicht auf die
-    // Fortschrittsanzeige warten. 100% wird immer sofort geschrieben.
-    if (percent < 100 && now - lastProgressEdit < 1100) return;
-    const filled = Math.max(0, Math.min(10, Math.round(percent / 10)));
-    const bar = "🟩".repeat(filled) + "⬜".repeat(10 - filled);
-    const content = ["📊 **Serveraufbau – Live-Fortschritt**", "**" + stage + "**", detail, bar + " **" + percent + "%**"].join("\n");
-    try {
-      await progressMessage.edit(content);
-      lastProgressEdit = Date.now();
-    } catch (error) {
-      console.warn("Fortschritt konnte nicht aktualisiert werden:", error.message);
-    }
-  };
-
   // Nur /minecraft darf den bestehenden Server ersetzen.
   if (options.replaceServer === true) {
     // Alle Kanäle laden und Discord-Community-Pflichtkanäle erhalten.
@@ -85,12 +42,11 @@ async function applyServerPlan(guild, plan, options = {}) {
     const keepCommandChannels = guild.channels.cache.filter(channel =>
       keepCommandNames.has(channel.name.toLowerCase()) ||
       channel.id === options.keepChannelId ||
-      channel.id === progressChannel.id ||
       communityKeepIds.has(channel.id)
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
-      if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || channel.id === progressChannel.id) continue;
+      if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
@@ -128,7 +84,6 @@ async function applyServerPlan(guild, plan, options = {}) {
   const createdRoleList = [];
   for (const [index, role] of plan.roles.entries()) {
     const name = cleanName(role.name, "Neue Rolle");
-    await updateProgress("Neue Rollen", "Erstelle " + name + " (" + (index + 1) + "/" + totalRoles + ")", 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
     try {
       const permissions = rolePermissions(name);
       console.log("[SERVER-BUILD] Erstelle Rolle:", name);
@@ -147,33 +102,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
     }
     completedRoles++;
-    await updateProgress("Neue Rollen", "Abgeschlossen: " + completedRoles + "/" + totalRoles, 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
   }
-
-  // Eigene Bot-Rolle mit Administratorrechten erstellen und dem Bot zuweisen.
-  // Discord erlaubt dies nur unterhalb der höchsten Rolle der Bot-Integration.
-  const botMember = await guild.members.fetchMe();
-  let botRole = guild.roles.cache.find(role => role.name === "Bot" && !role.managed);
-  if (!botRole) {
-    botRole = await guild.roles.create({
-      name: "Bot", colors: { primaryColor: 0x5865F2 }, hoist: true,
-      permissions: [PermissionFlagsBits.Administrator],
-      reason: "Discord Server Builder – Bot-Verwaltungsrolle"
-    });
-    created.roles++;
-  } else {
-    if (botRole.comparePositionTo(botMember.roles.highest) >= 0) {
-      throw new Error("Die Rolle 'Bot' muss unter der höchsten Bot-Integrationsrolle stehen.");
-    }
-    await botRole.setPermissions([PermissionFlagsBits.Administrator], "Bot-Verwaltungsrolle aktualisieren");
-  }
-  if (botRole.comparePositionTo(botMember.roles.highest) >= 0) {
-    throw new Error("Discord blockiert die Zuweisung: Verschiebe die Bot-Integrationsrolle über die Rolle 'Bot'.");
-  }
-  if (!botMember.roles.cache.has(botRole.id)) {
-    await botMember.roles.add(botRole, "Bot-Verwaltungsrechte zuweisen");
-  }
-
 
   // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
   const positions = createdRoleList
@@ -205,7 +134,6 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   let completedCategories = 0;
   for (const category of plan.categories) {
-    await updateProgress("Kategorien", "Erstelle " + category.name, 52 + Math.round(8 * completedCategories / Math.max(1, plan.categories.length)));
     let parent;
     try {
       parent = await guild.channels.create({
@@ -225,7 +153,6 @@ async function applyServerPlan(guild, plan, options = {}) {
     for (const channel of category.channels) {
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       try {
-      await updateProgress("Kanäle", "Erstelle #" + channelName + " (" + (completedChannels + 1) + "/" + totalChannels + ")", 60 + Math.round(38 * completedChannels / Math.max(1, totalChannels)));
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
         name: channelName, type, parent: parent.id,
@@ -293,21 +220,14 @@ async function applyServerPlan(guild, plan, options = {}) {
         console.error("[SERVER-BUILD] Kanal fehlgeschlagen:", channelName, error);
       } finally {
         completedChannels++;
-        await updateProgress("Kanäle", "Verarbeitet: " + completedChannels + "/" + totalChannels, 60 + Math.round(38 * completedChannels / Math.max(1, totalChannels)));
       }
     }
   }
-  await updateProgress("Abgeschlossen", "Erstellt: " + created.roles + " Rollen, " + created.categories + " Kategorien und " + created.channels + " Kanäle. Fehler: " + created.failedItems, 100);
-  await new Promise(resolve => setTimeout(resolve, 1200));
   return created;
   } catch (error) {
     console.error("[SERVER-BUILD] Aufbau abgebrochen:", error?.stack || error);
     throw error;
   } finally {
-    if (progressChannel) {
-      await progressChannel.delete("Temporärer Fortschrittskanal nach Abschluss oder Abbruch entfernen")
-        .catch(error => console.warn("Fortschrittskanal konnte nicht gelöscht werden:", error.message));
-    }
     activeBuildGuilds.delete(guild.id);
   }
 }
