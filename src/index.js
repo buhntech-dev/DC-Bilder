@@ -199,12 +199,14 @@ client.on("interactionCreate", async interaction => {
     return;
   }
   if (interaction.isChatInputCommand()) {
-    if (!interaction.inGuild()) return interaction.reply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
+    if (!interaction.inGuild()) return interaction.editReply({ content: "Bitte nutze den Befehl auf deinem Discord-Server.", ephemeral: true });
+    // Jede Slash-Interaktion sofort bestätigen. Lange Discord-API-Aufrufe dürfen
+    // nicht das 3-Sekunden-Interaktionsfenster überschreiten.
+    await interaction.deferReply({ ephemeral: true });
 
     // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
     // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
     if (interaction.commandName === "minecraft") {
-      await interaction.deferReply({ ephemeral: true });
       try {
         if (!isOwner(interaction)) {
           return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
@@ -235,7 +237,7 @@ client.on("interactionCreate", async interaction => {
     }
 
     const ownerOnly = ["build", "minecraft", "plan", "server-leeren"].includes(interaction.commandName);
-    if (ownerOnly && !isOwner(interaction)) return interaction.reply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
+    if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen.", ephemeral: true });
     if (interaction.commandName === "server-leeren") {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("serverwipe_confirm:" + interaction.user.id)
@@ -243,7 +245,7 @@ client.on("interactionCreate", async interaction => {
         new ButtonBuilder().setCustomId("serverwipe_cancel:" + interaction.user.id)
           .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
       );
-      return interaction.reply({
+      return interaction.editReply({
         content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Ein Kanal namens **#bot-commands**, **#bot-befehle** oder **#botcommands** bleibt erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
         components: [row], ephemeral: true
       });
@@ -257,9 +259,9 @@ client.on("interactionCreate", async interaction => {
       ticketpanel: PermissionFlagsBits.ManageChannels
     };
     const needed = permissions[interaction.commandName];
-    if (needed && !hasPermission(interaction, needed)) return interaction.reply({ content: "Dir fehlt die nötige Berechtigung.", ephemeral: true });
+    if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung.", ephemeral: true });
     if (ownerOnly && (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles))) {
-      return interaction.reply({ content: "Dir fehlen Kanäle verwalten und Rollen verwalten.", ephemeral: true });
+      return interaction.editReply({ content: "Dir fehlen Kanäle verwalten und Rollen verwalten.", ephemeral: true });
     }
     if (!ownerOnly) {
       try {
@@ -268,22 +270,22 @@ client.on("interactionCreate", async interaction => {
           const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Klicke auf Ticket erstellen. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
           const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket_open").setLabel("Ticket erstellen").setStyle(ButtonStyle.Success).setEmoji("🎫"));
           await interaction.channel.send({ embeds: [embed], components: [row] });
-          return interaction.reply({ content: "Support-Panel wurde veröffentlicht.", ephemeral: true });
+          return interaction.editReply({ content: "Support-Panel wurde veröffentlicht.", ephemeral: true });
         }
         if (cmd === "clear") {
           const amount = interaction.options.getInteger("anzahl", true);
           const deleted = await interaction.channel.bulkDelete(amount, true);
-          await interaction.reply({ content: "🧹 " + deleted.size + " Nachrichten gelöscht. Ältere Nachrichten kann Discord nicht gesammelt löschen.", ephemeral: true });
+          await interaction.editReply({ content: "🧹 " + deleted.size + " Nachrichten gelöscht. Ältere Nachrichten kann Discord nicht gesammelt löschen.", ephemeral: true });
           await sendLog(interaction.guild, interaction.user.tag + " löschte " + deleted.size + " Nachrichten in #" + interaction.channel.name + ".");
           return;
         }
         if (cmd === "kick" || cmd === "ban") {
           const target = interaction.options.getMember("mitglied");
           const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
-          if (!target) return interaction.reply({ content: "Mitglied nicht gefunden.", ephemeral: true });
-          if (target.id === interaction.user.id || target.id === interaction.guild.ownerId || (cmd === "kick" && !target.kickable) || (cmd === "ban" && !target.bannable)) return interaction.reply({ content: "Dieses Mitglied kann wegen der Rollen-Hierarchie nicht moderiert werden.", ephemeral: true });
+          if (!target) return interaction.editReply({ content: "Mitglied nicht gefunden.", ephemeral: true });
+          if (target.id === interaction.user.id || target.id === interaction.guild.ownerId || (cmd === "kick" && !target.kickable) || (cmd === "ban" && !target.bannable)) return interaction.editReply({ content: "Dieses Mitglied kann wegen der Rollen-Hierarchie nicht moderiert werden.", ephemeral: true });
           if (cmd === "kick") await target.kick(reason); else await target.ban({ reason });
-          await interaction.reply({ content: "✅ " + target.user.tag + " wurde " + (cmd === "kick" ? "gekickt" : "gebannt") + ". Grund: " + reason, ephemeral: true });
+          await interaction.editReply({ content: "✅ " + target.user.tag + " wurde " + (cmd === "kick" ? "gekickt" : "gebannt") + ". Grund: " + reason, ephemeral: true });
           await sendLog(interaction.guild, interaction.user.tag + " hat " + target.user.tag + " moderiert. Grund: " + reason);
           return;
         }
@@ -291,25 +293,25 @@ client.on("interactionCreate", async interaction => {
           const target = interaction.options.getMember("mitglied");
           const minutes = interaction.options.getInteger("minuten", true);
           const reason = interaction.options.getString("grund") || "Kein Grund angegeben";
-          if (!target || !target.moderatable || target.id === interaction.user.id) return interaction.reply({ content: "Dieses Mitglied kann nicht stummgeschaltet werden.", ephemeral: true });
+          if (!target || !target.moderatable || target.id === interaction.user.id) return interaction.editReply({ content: "Dieses Mitglied kann nicht stummgeschaltet werden.", ephemeral: true });
           await target.timeout(minutes * 60000, reason);
-          await interaction.reply({ content: "⏳ Timeout für " + target.user.tag + ": " + minutes + " Minuten.", ephemeral: true });
+          await interaction.editReply({ content: "⏳ Timeout für " + target.user.tag + ": " + minutes + " Minuten.", ephemeral: true });
           await sendLog(interaction.guild, interaction.user.tag + " gab " + target.user.tag + " " + minutes + " Minuten Timeout. Grund: " + reason);
           return;
         }
         if (cmd === "announce") {
           const text = interaction.options.getString("text", true);
           await interaction.channel.send({ embeds: [new EmbedBuilder().setColor(0xF1C40F).setTitle("📢 Ankündigung").setDescription(text).setFooter({ text: "Von " + interaction.user.tag }).setTimestamp()] });
-          return interaction.reply({ content: "Ankündigung wurde veröffentlicht.", ephemeral: true });
+          return interaction.editReply({ content: "Ankündigung wurde veröffentlicht.", ephemeral: true });
         }
         if (cmd === "lock" || cmd === "unlock") {
           await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: cmd === "lock" ? false : null });
-          return interaction.reply({ content: cmd === "lock" ? "🔒 Kanal gesperrt." : "🔓 Kanalsperre aufgehoben." });
+          return interaction.editReply({ content: cmd === "lock" ? "🔒 Kanal gesperrt." : "🔓 Kanalsperre aufgehoben." });
         }
         if (cmd === "slowmode") {
           const seconds = interaction.options.getInteger("sekunden", true);
           await interaction.channel.setRateLimitPerUser(seconds);
-          return interaction.reply({ content: "Zeitlupe auf " + seconds + " Sekunden gesetzt." });
+          return interaction.editReply({ content: "Zeitlupe auf " + seconds + " Sekunden gesetzt." });
         }
         if (cmd === "serverinfo") {
           const g = interaction.guild;
@@ -320,16 +322,15 @@ client.on("interactionCreate", async interaction => {
               { name: "Rollen", value: String(g.roles.cache.size), inline: true },
               { name: "Erstellt", value: "<t:" + Math.floor(g.createdTimestamp / 1000) + ":D>", inline: true }
             ).setThumbnail(g.iconURL());
-          return interaction.reply({ embeds: [embed], ephemeral: true });
+          return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
       } catch (error) {
         console.error("Fehler bei /" + interaction.commandName + ":", error);
         const message = "Fehler: " + String(error.message || error).slice(0, 500);
         if (interaction.deferred || interaction.replied) return interaction.followUp({ content: message, ephemeral: true });
-        return interaction.reply({ content: message, ephemeral: true });
+        return interaction.editReply({ content: message, ephemeral: true });
       }
     }
-    await interaction.deferReply({ ephemeral: true });
     try {
       const isMinecraft = interaction.commandName === "minecraft";
       const plan = isMinecraft
