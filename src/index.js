@@ -11,6 +11,7 @@ const { joinSupportVoice } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
+const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -281,8 +282,36 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren"].includes(interaction.commandName);
+    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren", "backup", "backup-wiederherstellen", "papierkorb"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen." });
+    if (interaction.commandName === "backup") {
+      try {
+        const result = await createGuildBackup(interaction.guild, "Manuelles Backup durch " + interaction.user.tag);
+        return interaction.editReply(`✅ Backup erstellt. Rollen: **${result.roles}**, Kanäle: **${result.channels}**. Backup-ID: \`${result.messageId}\` (im privaten #backup-archiv).`);
+      } catch (error) {
+        console.error("Backup fehlgeschlagen:", error);
+        return interaction.editReply("Backup fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "papierkorb") {
+      try {
+        const backups = await listBackups(interaction.guild, 10);
+        return interaction.editReply({ embeds: [backupListEmbed(backups)] });
+      } catch (error) {
+        return interaction.editReply("Backup-Archiv konnte nicht geladen werden: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "backup-wiederherstellen") {
+      try {
+        const backupId = interaction.options.getString("backup_id", true).trim();
+        if (!/^\d{17,20}$/.test(backupId)) return interaction.editReply("Bitte gib eine gültige Discord-Nachrichten-ID ein.");
+        const result = await restoreGuildBackup(interaction.guild, backupId);
+        return interaction.editReply(`✅ Wiederherstellung abgeschlossen. Neu erstellt: **${result.rolesCreated} Rollen** und **${result.channelsCreated} Kanäle**. Bestehende Elemente wurden nicht gelöscht.`);
+      } catch (error) {
+        console.error("Backup-Wiederherstellung fehlgeschlagen:", error);
+        return interaction.editReply("Wiederherstellung fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
     if (interaction.commandName === "serverstatus") {
       try {
         const status = await updateGuildMinecraftStatus(interaction.guild);
