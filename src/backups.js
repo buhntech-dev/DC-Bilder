@@ -61,6 +61,7 @@ function serializeGuild(guild) {
 }
 
 async function getBackupChannel(guild, create = true) {
+  await guild.roles.fetch();
   await guild.channels.fetch();
   let channel = guild.channels.cache.find(item =>
     item.type === ChannelType.GuildText && BACKUP_CHANNEL_NAMES.includes(item.name.toLowerCase())
