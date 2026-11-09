@@ -81,7 +81,7 @@ function createProgressUpdater(interaction, progressMessage, intervalMs = 1200) 
       Promise.resolve().then(() => progressMessage.edit({ content: snapshot })).catch(() => {})
     ]).finally(() => { flushing = null; });
     await flushing;
-    if (latestText !== snapshot && !stopped) await flush();
+    if (latestText !== snapshot) await flush();
   }
 
   async function stop() {
