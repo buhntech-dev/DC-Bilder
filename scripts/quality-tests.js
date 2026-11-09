@@ -10,7 +10,7 @@ const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createProm
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { createSupportChime } = require("../src/support-voice");
 const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
-const { createRconPacket, readRconPacket } = require("../src/minecraft-rcon");
+const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
 
 let passed = 0;
 async function test(name, fn) {
@@ -251,7 +251,7 @@ async function test(name, fn) {
   });
   await test("Neue Status- und Backup-Befehle sind registriert", () => {
     const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
-    for (const command of ["serverstatus", "beforderung", "backup", "backup-wiederherstellen", "papierkorb"]) {
+    for (const command of ["serverstatus", "beforderung", "backup", "backup-wiederherstellen", "papierkorb", "spieler-eintragen", "spieler-suchen"]) {
       assert.ok(commandsSource.includes('setName("' + command + '")'), "Fehlender Befehl: " + command);
     }
   });
@@ -294,6 +294,15 @@ async function test(name, fn) {
   });
   await test("RCON-Paket-Parser lehnt ungültige Längen ab", () => {
     assert.throws(() => readRconPacket(Buffer.from([1, 0, 0, 0])), /RCON/i);
+  });
+
+
+  await test("RCON-Whitelist lehnt ungültige Minecraft-Namen ab", async () => await assert.rejects(() => addMinecraftWhitelist("bad name"), /Minecraft-Name/i));
+  await test("RCON-Verbindung verlangt ein Passwort", async () => await assert.rejects(() => executeRconCommand("list", { password: "" }), /RCON_PASSWORD/i));
+  await test("Spielerregister-Befehle sind registriert", () => {
+    const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    assert.ok(commandsSource.includes('setName("spieler-eintragen")'));
+    assert.ok(commandsSource.includes('setName("spieler-suchen")'));
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
