@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "discord.js": "^14.27.0",
-    "dotenv": "16.4.7",
-    "@discordjs/voice": "0.18.0"
+    "dotenv": "^18.0.10",
+    "@discordjs/voice": "^0.19.2",
+    "zod": "^4.6.7"
   }
 }
