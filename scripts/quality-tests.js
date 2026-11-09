@@ -9,6 +9,8 @@ const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, st
 const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { createSupportChime } = require("../src/support-voice");
+const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
+const { createRconPacket, readRconPacket } = require("../src/minecraft-rcon");
 
 let passed = 0;
 async function test(name, fn) {
@@ -259,6 +261,39 @@ async function test(name, fn) {
     assert.equal(typeof createGuildBackup, "function");
     assert.equal(typeof restoreGuildBackup, "function");
     assert.equal(typeof startWeeklyBackups, "function");
+  });
+
+
+  await test("Minecraft-Namen validieren gültige Java-Namen", () => assert.equal(validMinecraftName("Steve_123"), true));
+  await test("Minecraft-Namen lehnen Leerzeichen ab", () => assert.equal(validMinecraftName("Steve Player"), false));
+  await test("Minecraft-Namen lehnen zu kurze Namen ab", () => assert.equal(validMinecraftName("ab"), false));
+  await test("Minecraft-Namen lehnen Sonderzeichen ab", () => assert.equal(validMinecraftName("Steve!"), false));
+  await test("Teamleitung darf Spielerregister verwalten", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Teamleitung" }] } };
+    assert.equal(canManagePlayerRegistry(member), true);
+  });
+  await test("Normales Mitglied darf Spielerregister nicht verwalten", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(canManagePlayerRegistry(member), false);
+  });
+  await test("Spielerregister-Embed enthält Minecraft- und Discord-Zuordnung", () => {
+    const embed = playerEmbed("Steve", { id: "123", user: { tag: "Steve#0001" } }, { tag: "Admin#0001" }, { configured: false }).toJSON();
+    assert.ok(embed.fields.some(field => field.name === "Minecraft-Name" && field.value === "Steve"));
+    assert.ok(embed.fields.some(field => field.name === "Discord-ID" && field.value === "123"));
+  });
+  await test("RCON-Paket enthält korrekte Request-ID und Typ", () => {
+    const packet = createRconPacket(2, 2, "whitelist add Steve");
+    const parsed = readRconPacket(packet);
+    assert.equal(parsed.id, 2);
+    assert.equal(parsed.type, 2);
+    assert.equal(parsed.payload, "whitelist add Steve");
+    assert.equal(parsed.remaining.length, 0);
+  });
+  await test("RCON-Paket-Parser wartet auf vollständige Daten", () => {
+    assert.equal(readRconPacket(Buffer.from([10, 0, 0, 0, 1])), null);
+  });
+  await test("RCON-Paket-Parser lehnt ungültige Längen ab", () => {
+    assert.throws(() => readRconPacket(Buffer.from([1, 0, 0, 0])), /RCON/i);
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
