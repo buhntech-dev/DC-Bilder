@@ -30,6 +30,10 @@ const commands = [
         .setMaxLength(4000)
     ),
 
+  new SlashCommandBuilder().setName("backup").setDescription("Erstellt sofort ein Backup der Discord-Struktur"),
+  new SlashCommandBuilder().setName("backup-wiederherstellen").setDescription("Stellt fehlende Rollen und Kanäle aus einem Backup wieder her")
+    .addStringOption(o => o.setName("backup_id").setDescription("Nachrichten-ID des Backups aus #backup-archiv").setRequired(true)),
+  new SlashCommandBuilder().setName("papierkorb").setDescription("Zeigt die letzten Backups und Wiederherstellungspunkte"),
   new SlashCommandBuilder().setName("serverstatus").setDescription("Zeigt den aktuellen Minecraft-Serverstatus"),
   new SlashCommandBuilder().setName("beforderung").setDescription("Beantragt eine Team-Beförderung mit Freigabe")
     .addUserOption(o => o.setName("mitglied").setDescription("Teammitglied").setRequired(true))
