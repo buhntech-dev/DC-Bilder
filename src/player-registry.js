@@ -93,10 +93,11 @@ async function registerPlayer(guild, minecraftName, member, actor = null) {
 }
 
 async function searchRegisteredPlayers(guild, query) {
+  const key = String(query || "").trim().toLowerCase();
+  if (!key) throw new Error("Bitte gib einen Minecraft- oder Discord-Namen für die Suche ein.");
   const channel = await getPlayerRegistryChannel(guild, false);
   if (!channel) return [];
   const messages = await channel.messages.fetch({ limit: 100 });
-  const key = String(query || "").trim().toLowerCase();
   return [...messages.values()]
     .filter(message => {
       const fields = message.embeds[0]?.fields || [];
