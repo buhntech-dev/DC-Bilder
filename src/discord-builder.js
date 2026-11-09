@@ -328,6 +328,27 @@ async function applyServerPlan(guild, plan, options = {}) {
           .setFooter({ text: "Minecraft Community • Bitte halte dich an die Regeln" });
         await createdChannel.send({ embeds: [rulesEmbed] });
       }
+      if (/team-regeln/.test(channelName) && type === ChannelType.GuildText) {
+        const teamRules = new EmbedBuilder()
+          .setColor(0x9b59b6)
+          .setTitle("📜 Verbindliche Team-Regeln")
+          .setDescription([
+            "**1. Respekt:** Wir behandeln Mitglieder und Teamkollegen freundlich und professionell.",
+            "**2. Vertraulichkeit:** Interne Gespräche, Bewerbungen, Reports und persönliche Daten bleiben intern.",
+            "**3. Rechte:** Teamrechte werden nur für dienstliche Aufgaben genutzt. Machtmissbrauch ist verboten.",
+            "**4. Neutralität:** Entscheidungen erfolgen fair, nachvollziehbar und ohne persönliche Bevorzugung.",
+            "**5. Aktivität:** Abwesenheiten und längere Pausen werden der Teamleitung mitgeteilt.",
+            "**6. Support:** Tickets werden sachlich, zeitnah und vollständig bearbeitet.",
+            "**7. Beweise:** Sanktionen und wichtige Entscheidungen werden mit nachvollziehbaren Belegen dokumentiert.",
+            "**8. Kommunikation:** Interne Konflikte werden ruhig im passenden Teamkanal geklärt.",
+            "**9. Sicherheit:** Keine Tokens, Passwörter oder privaten Zugangsdaten in Discord teilen.",
+            "**10. Vorbildfunktion:** Teammitglieder halten die Serverregeln ein und repräsentieren die Community positiv.",
+            "",
+            "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
+          ].join("\n"))
+          .setFooter({ text: "Minecraft Community • Teamleitung" });
+        await createdChannel.send({ embeds: [teamRules] });
+      }
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
           .setColor(0x2ECC71)
