@@ -21,6 +21,8 @@ for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMin
   const channels = preset.categories.flatMap(category => category.channels);
   if (preset.roles.length > 250 || preset.categories.length + channels.length > 500) throw new Error(name + ": Discord-Limit überschritten.");
   if (!preset.roles.some(role => role.name === "Owner")) throw new Error(name + ": Owner-Rolle fehlt.");
+  if (name === "Minecraft" && !preset.roles.some(role => role.name === "Test Support")) throw new Error("Minecraft: Test Support-Rolle fehlt.");
+  if (name === "Minecraft" && !preset.categories.some(category => category.channels.some(channel => channel.name.includes("whitelist-bearbeitung")))) throw new Error("Minecraft: interner Whitelist-Kanal fehlt.");
   if (name === "Minecraft") {
     const support = channels.filter(channel => channel.type === "voice" && /^Support (?:[1-9]|10)$/.test(channel.name));
     if (support.length !== 10) throw new Error("Minecraft: Es müssen genau 10 Support-Sprachkanäle vorhanden sein.");
