@@ -1,5 +1,15 @@
-function buildWebsiteHtml(serverName = "ProfiMine Ultimate") {
-  const safeName = String(serverName || "Minecraft Community").replace(/[<>]/g, "");
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+}
+
+function buildWebsiteHtml(serverName = "ProfiMine Ultimate", options = {}) {
+  const safeName = escapeHtml(serverName || "Minecraft Community");
+  const serverAddress = escapeHtml(options.address || process.env.MINECRAFT_ADDRESS || "Communety.aternos.me:18884");
+  const discordInvite = /^https:\/\/(?:discord\.gg\/|discord\.com\/invite\/)[A-Za-z0-9-]+$/i.test(options.discordInvite || process.env.DISCORD_INVITE_URL || "")
+    ? (options.discordInvite || process.env.DISCORD_INVITE_URL)
+    : "https://discord.com/";
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -20,13 +30,13 @@ footer{text-align:center;border-top:1px solid var(--line);padding:28px;color:var
 <nav><strong>⛏️ ${safeName}</strong><div><a href="#features">Features</a><a href="#join">Beitreten</a></div></nav>
 <header class="hero"><div class="tag">Deine nächste Minecraft-Community</div><h1>Baue. Spiele.<br><span style="color:var(--accent)">Erlebe mehr.</span></h1>
 <p>Werde Teil unserer Community, entdecke neue Spielmodi und spiele gemeinsam mit Freunden.</p>
-<a class="btn" href="#join">Jetzt beitreten</a><a class="btn" href="https://discord.com/" style="background:#263653;color:white">Discord öffnen</a></header>
+<a class="btn" href="#join">Jetzt beitreten</a><a class="btn" href="${discordInvite}" style="background:#263653;color:white">Discord öffnen</a></header>
 <main class="wrap"><section id="features" class="grid">
 <article class="card"><h2>🌲 Survival</h2><p>Erkunde die Welt, baue dein Zuhause und starte dein Abenteuer.</p></article>
 <article class="card"><h2>⚔️ Spielmodi</h2><p>Entdecke abwechslungsreiche Herausforderungen und Minigames.</p></article>
 <article class="card"><h2>🤝 Community</h2><p>Finde Mitspieler, nimm an Events teil und werde Teil des Teams.</p></article>
-</section><section id="join" class="card" style="margin-top:20px;text-align:center"><h2>Bereit zum Spielen?</h2><p>Füge die Serveradresse in Minecraft Java unter Mehrspieler hinzu.</p><div class="ip">Communety.aternos.me:18884</div><p>Die Serverversion und Erreichbarkeit können sich ändern.</p></section></main>
+</section><section id="join" class="card" style="margin-top:20px;text-align:center"><h2>Bereit zum Spielen?</h2><p>Füge die Serveradresse in Minecraft Java unter Mehrspieler hinzu.</p><div class="ip">${serverAddress}</div><p>Die Serverversion und Erreichbarkeit können sich ändern.</p></section></main>
 <footer>© ${new Date().getFullYear()} ${safeName} · Minecraft ist eine Marke von Mojang Studios.</footer>
 </body></html>`;
 }
-module.exports = { buildWebsiteHtml };
+module.exports = { buildWebsiteHtml, escapeHtml };

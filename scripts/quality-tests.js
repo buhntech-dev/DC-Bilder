@@ -2,9 +2,16 @@ const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
 const { createServerPlan } = require("../src/ai");
-const { buildWebsiteHtml } = require("../src/website");
+const { buildWebsiteHtml, escapeHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
+const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
+const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
+const { searchRegisteredPlayers } = require("../src/player-registry");
+const { createSupportChime } = require("../src/support-voice");
+const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
+const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
 
 let passed = 0;
 async function test(name, fn) {
@@ -138,6 +145,261 @@ async function test(name, fn) {
   await test("Bewerbungs-Panel baut eine Button-Komponente", () => {
     const row = panelRow("application_open", "Bewerbung starten", "📝").toJSON();
     assert.equal(row.components[0].custom_id, "application_open");
+  });
+
+
+  await test("Minecraft-VarInt codiert Null", () => assert.deepEqual([...encodeVarInt(0)], [0]));
+  await test("Minecraft-VarInt codiert 127", () => assert.deepEqual([...encodeVarInt(127)], [127]));
+  await test("Minecraft-VarInt codiert 128", () => assert.deepEqual([...encodeVarInt(128)], [128, 1]));
+  await test("Minecraft-VarInt dekodiert 300", () => assert.deepEqual(decodeVarInt(encodeVarInt(300)), { value: 300, bytes: 2 }));
+  await test("Unvollständiger Minecraft-VarInt wird erkannt", () => assert.equal(decodeVarInt(Buffer.from([0x80])), null));
+  await test("Minecraft-Adresse nutzt konfigurierten Port", () => assert.deepEqual(parseMinecraftAddress("play.example.net:25570"), { host: "play.example.net", port: 25570 }));
+  await test("Minecraft-Adresse nutzt den bekannten Standardserver", () => assert.deepEqual(parseMinecraftAddress(DEFAULT_ADDRESS), { host: "Communety.aternos.me", port: 18884 }));
+  await test("Ungültiger Minecraft-Port wird abgelehnt", () => assert.throws(() => parseMinecraftAddress("example.net:70000"), /Port/i));
+  await test("Minecraft-Statusantwort wird korrekt gelesen", () => {
+    const json = Buffer.from(JSON.stringify({ version: { name: "1.21.4" }, players: { online: 3, max: 20 } }));
+    const response = Buffer.concat([encodeVarInt(0), encodeVarInt(json.length), json]);
+    const data = Buffer.concat([encodeVarInt(response.length), response]);
+    assert.deepEqual(parseStatusPacket(data), { online: true, version: "1.21.4", players: 3, maxPlayers: 20, description: "" });
+  });
+  await test("Unvollständige Minecraft-Statusantwort wartet auf weitere Daten", () => assert.equal(parseStatusPacket(Buffer.from([0x05, 0x00])), null));
+  await test("Offline-Status wird als rotes Embed ausgegeben", () => {
+    const embed = statusEmbed({ online: false, error: "Offline" }, DEFAULT_ADDRESS).toJSON();
+    assert.equal(embed.color, 0xe74c3c);
+    assert.ok(embed.fields.some(field => field.name === "Adresse"));
+  });
+  await test("Team-Rangfolge beginnt mit Test Support", () => assert.equal(TEAM_RANKS[0], "Test Support"));
+  await test("Team-Rangfolge endet mit Senior Administrator", () => assert.equal(TEAM_RANKS.at(-1), "Senior Administrator"));
+  await test("Team-Rangfolge enthält sieben Stufen", () => assert.equal(TEAM_RANKS.length, 7));
+  await test("Teammitglied-Rang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Test Support" }, { name: "Mitglied" }] } };
+    assert.equal(currentTeamRank(member), 0);
+  });
+  await test("Höchster Teamrang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Senior Administrator" }] } };
+    assert.equal(currentTeamRank(member), 6);
+  });
+  await test("Mitglied ohne Teamrang wird erkannt", () => {
+    const member = { roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(currentTeamRank(member), -1);
+  });
+  await test("Beförderungsbuttons enthalten Zielmitglied und Rang", () => {
+    const row = promotionRow("123456789012345678", 2).toJSON();
+    assert.equal(row.components[0].custom_id, "promotion_approve:123456789012345678:2");
+    assert.equal(row.components[1].custom_id, "promotion_reject:123456789012345678:2");
+  });
+  await test("Teamleitung darf Beförderungen prüfen", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Teamleitung" }] } };
+    assert.equal(hasTeamLeadAccess(member), true);
+  });
+  await test("Normales Mitglied darf keine Beförderungen prüfen", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(hasTeamLeadAccess(member), false);
+  });
+
+
+  await test("Backup-Wochenkennung berechnet ISO-Woche", () => assert.equal(isoWeekKey({ year: 2026, month: 1, day: 1 }), "2026-W01"));
+  await test("Backup-Wochenkennung verarbeitet Jahreswechsel", () => assert.equal(isoWeekKey({ year: 2025, month: 12, day: 29 }), "2026-W01"));
+  await test("Berlin-Zeitzone berücksichtigt Winterzeit", () => {
+    const parts = berlinParts(new Date("2026-11-09T09:00:00.000Z"));
+    assert.equal(parts.hour, "10");
+    assert.equal(parts.weekday, "Mon");
+  });
+  await test("Berlin-Zeitzone berücksichtigt Sommerzeit", () => {
+    const parts = berlinParts(new Date("2026-07-06T08:00:00.000Z"));
+    assert.equal(parts.hour, "10");
+  });
+  await test("Backup-Archiv zeigt Hinweis bei leerer Liste", () => {
+    const embed = backupListEmbed([]).toJSON();
+    assert.ok(embed.description.includes("/backup"));
+  });
+  await test("Backup-Archiv listet Wiederherstellungs-IDs", () => {
+    const embed = backupListEmbed([{ id: "123456789012345678", createdAt: new Date("2026-01-01T12:00:00Z"), summary: "Minecraft Backup" }]).toJSON();
+    assert.ok(embed.description.includes("123456789012345678"));
+  });
+  await test("Backup-Serialisierung enthält Versionskennung", () => {
+    const roles = { cache: { values: () => [ { id:"g", name:"@everyone", managed:false }, { id:"r", name:"Owner", managed:false, hexColor:"#ff0000", hoist:true, mentionable:false, permissions:{bitfield:8n}, position:2 } ] } };
+    const channels = { cache: { values: () => [] } };
+    const snapshot = serializeGuild({ id:"g", name:"Test", roles, channels });
+    assert.equal(snapshot.format, "discord-server-builder-backup-v1");
+    assert.equal(snapshot.roles.length, 1);
+    assert.equal(snapshot.roles[0].permissions, "8");
+  });
+
+
+  await test("Support-Signalton wird als PCM-Audio erzeugt", () => {
+    const audio = createSupportChime();
+    assert.ok(Buffer.isBuffer(audio));
+    assert.ok(audio.length > 48000);
+    assert.equal(audio.length % 4, 0);
+  });
+  await test("Support-Signalton hat Stereo-PCM-Samples", () => {
+    const audio = createSupportChime();
+    assert.notEqual(audio.readInt16LE(200), 0);
+    assert.equal(audio.readInt16LE(200), audio.readInt16LE(202));
+  });
+
+
+  await test("Minecraft-Preset enthält Teamleitung", () => assert.ok(mc.roles.some(r => r.name === "Teamleitung")));
+  await test("Minecraft-Preset enthält privaten Team-Regelkanal", () => {
+    const channel = mc.categories.flatMap(c => c.channels).find(c => c.name.includes("team-regeln"));
+    assert.ok(channel && channel.privateToRoles.includes("Teamleitung"));
+  });
+  await test("Teamleitung erhält Verwaltungsrechte", () => assert.ok(rolePermissions("Teamleitung").includes(PermissionFlagsBits.ManageRoles)));
+  await test("Bot erhält Zugriff auf private Kanäle", () => {
+    const overwrites = buildChannelOverwrites({ roles: { everyone: { id: "everyone" } } }, ["Supporter"], new Map(), null, "bot-id");
+    assert.ok(overwrites.some(o => o.id === "bot-id" && o.allow.includes(PermissionFlagsBits.Connect)));
+  });
+  await test("Neue Status- und Backup-Befehle sind registriert", () => {
+    const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    for (const command of ["serverstatus", "beforderung", "backup", "backup-wiederherstellen", "papierkorb", "spieler-eintragen", "spieler-suchen"]) {
+      assert.ok(commandsSource.includes('setName("' + command + '")'), "Fehlender Befehl: " + command);
+    }
+  });
+  await test("Beförderungs- und Backup-Module exportieren ihre Kernfunktionen", () => {
+    assert.equal(typeof createPromotionRequest, "function");
+    assert.equal(typeof handlePromotionInteraction, "function");
+    assert.equal(typeof createGuildBackup, "function");
+    assert.equal(typeof restoreGuildBackup, "function");
+    assert.equal(typeof startWeeklyBackups, "function");
+  });
+
+
+  await test("Minecraft-Namen validieren gültige Java-Namen", () => assert.equal(validMinecraftName("Steve_123"), true));
+  await test("Minecraft-Namen lehnen Leerzeichen ab", () => assert.equal(validMinecraftName("Steve Player"), false));
+  await test("Minecraft-Namen lehnen zu kurze Namen ab", () => assert.equal(validMinecraftName("ab"), false));
+  await test("Minecraft-Namen lehnen Sonderzeichen ab", () => assert.equal(validMinecraftName("Steve!"), false));
+  await test("Teamleitung darf Spielerregister verwalten", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Teamleitung" }] } };
+    assert.equal(canManagePlayerRegistry(member), true);
+  });
+  await test("Normales Mitglied darf Spielerregister nicht verwalten", () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Mitglied" }] } };
+    assert.equal(canManagePlayerRegistry(member), false);
+  });
+  await test("Spielerregister-Embed enthält Minecraft- und Discord-Zuordnung", () => {
+    const embed = playerEmbed("Steve", { id: "123", user: { tag: "Steve#0001" } }, { tag: "Admin#0001" }, { configured: false }).toJSON();
+    assert.ok(embed.fields.some(field => field.name === "Minecraft-Name" && field.value === "Steve"));
+    assert.ok(embed.fields.some(field => field.name === "Discord-ID" && field.value === "123"));
+  });
+  await test("RCON-Paket enthält korrekte Request-ID und Typ", () => {
+    const packet = createRconPacket(2, 2, "whitelist add Steve");
+    const parsed = readRconPacket(packet);
+    assert.equal(parsed.id, 2);
+    assert.equal(parsed.type, 2);
+    assert.equal(parsed.payload, "whitelist add Steve");
+    assert.equal(parsed.remaining.length, 0);
+  });
+  await test("RCON-Paket-Parser wartet auf vollständige Daten", () => {
+    assert.equal(readRconPacket(Buffer.from([10, 0, 0, 0, 1])), null);
+  });
+  await test("RCON-Paket-Parser lehnt ungültige Längen ab", () => {
+    assert.throws(() => readRconPacket(Buffer.from([1, 0, 0, 0])), /RCON/i);
+  });
+
+
+  await test("RCON-Whitelist lehnt ungültige Minecraft-Namen ab", async () => await assert.rejects(() => addMinecraftWhitelist("bad name"), /Minecraft-Name/i));
+  await test("RCON-Verbindung verlangt ein Passwort", async () => await assert.rejects(() => executeRconCommand("list", { password: "" }), /RCON_PASSWORD/i));
+  await test("Spielerregister-Befehle sind registriert", () => {
+    const commandsSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    assert.ok(commandsSource.includes('setName("spieler-eintragen")'));
+    assert.ok(commandsSource.includes('setName("spieler-suchen")'));
+  });
+
+
+  await test("Website escaped HTML-Sonderzeichen sicher", () => assert.equal(escapeHtml('<script a="b">&'), "&lt;script a=&quot;b&quot;&gt;&amp;"));
+  await test("Website verwendet konfigurierte Serveradresse", () => assert.ok(buildWebsiteHtml("Test", { address: "play.example.net:25565" }).includes("play.example.net:25565")));
+  await test("Website akzeptiert nur Discord-Einladungslinks", () => {
+    const safe = buildWebsiteHtml("Test", { discordInvite: "https://discord.gg/example" });
+    const unsafe = buildWebsiteHtml("Test", { discordInvite: "javascript:alert(1)" });
+    assert.ok(safe.includes('href="https://discord.gg/example"'));
+    assert.ok(!unsafe.includes('href="javascript:'));
+  });
+
+
+  await test("Minecraft-Status-Aktualisierung startet beim Bot-Start", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("startMinecraftStatusUpdates(client)"));
+  });
+  await test("Wöchentliche Backups starten beim Bot-Start", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("startWeeklyBackups(client)"));
+  });
+  await test("Server-Neuaufbau erstellt zuerst ein Sicherheitsbackup", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    const backup = source.indexOf('createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")');
+    const build = source.indexOf("applyServerPlan(interaction.guild, entry.plan");
+    assert.ok(backup >= 0 && build > backup);
+  });
+  await test("Server-Leerung erstellt vor dem Löschen ein Sicherheitsbackup", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    const wipe = source.indexOf('createGuildBackup(guild, "Sicherheitsbackup vor /server-leeren")');
+    const deletion = source.indexOf('channel.delete("Serverinhaber hat /server-leeren bestätigt")');
+    assert.ok(wipe >= 0 && deletion > wipe);
+  });
+
+
+  await test("Leere Spielersuche wird abgelehnt", async () => await assert.rejects(() => searchRegisteredPlayers(null, "   "), /Suche/i));
+  await test("Backup-Wiederherstellung legt fehlende Rollen und Kanäle an", async () => {
+    const { Collection, ChannelType } = require("discord.js");
+    const snapshot = {
+      format: "discord-server-builder-backup-v1",
+      guildId: "restore-guild",
+      roles: [{ name: "Owner", color: "#ff0000", hoist: true, mentionable: false, permissions: "8", position: 2 }],
+      channels: [
+        { name: "START", type: ChannelType.GuildCategory, parentName: null, topic: "", overwrites: [] },
+        { name: "regeln", type: ChannelType.GuildText, parentName: "START", topic: "Regeln", overwrites: [{ roleName: "@everyone", allow: "0", deny: "1024" }] }
+      ]
+    };
+    const roles = new Collection();
+    roles.set("restore-guild", { id: "restore-guild", name: "@everyone" });
+    let roleId = 0, channelId = 0, ownerAssigned = false;
+    const ownerMember = {
+      roles: {
+        cache: new Collection(),
+        async add(role) { this.cache.set(role.id, role); ownerAssigned = true; }
+      }
+    };
+    const backupMessage = {
+      author: { id: "bot" },
+      attachments: new Collection([["file", { url: "https://example.invalid/backup.json" }]])
+    };
+    const backupChannel = {
+      id: "backup-channel", name: "backup-archiv", type: ChannelType.GuildText,
+      messages: { async fetch() { return backupMessage; } }
+    };
+    const channels = new Collection([[backupChannel.id, backupChannel]]);
+    const guild = {
+      id: "restore-guild", ownerId: "owner-id", client: { user: { id: "bot" } },
+      roles: {
+        cache: roles,
+        async fetch() { return roles; },
+        async create(options) {
+          const role = { id: "role-" + (++roleId), name: options.name };
+          roles.set(role.id, role);
+          return role;
+        }
+      },
+      channels: {
+        cache: channels,
+        async fetch() { return channels; },
+        async create(options) {
+          const channel = { id: "channel-" + (++channelId), ...options, parentId: options.parent || null };
+          channels.set(channel.id, channel);
+          return channel;
+        }
+      },
+      members: { async fetch() { return ownerMember; } }
+    };
+    const originalFetch = global.fetch;
+    global.fetch = async () => ({ ok: true, async json() { return snapshot; } });
+    try {
+      const result = await restoreGuildBackup(guild, "backup-message-id");
+      assert.deepEqual(result, { rolesCreated: 1, categoriesCreated: 1, channelsCreated: 1, sourceMessageId: "backup-message-id" });
+      assert.equal(ownerAssigned, true);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");

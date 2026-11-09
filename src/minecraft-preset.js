@@ -9,6 +9,7 @@ function createMinecraftPreset() {
   const roles = [
     { name: "Owner", color: "#E74C3C", hoist: true, mentionable: false },
     { name: "Management", color: "#9B59B6", hoist: true, mentionable: false },
+    { name: "Teamleitung", color: "#8E44AD", hoist: true, mentionable: false },
     { name: "Senior Administrator", color: "#C0392B", hoist: true, mentionable: false },
     { name: "Administrator", color: "#E67E22", hoist: true, mentionable: false },
     { name: "Admin im Dienst", color: "#2ECC71", hoist: true, mentionable: false },
@@ -85,6 +86,7 @@ function createMinecraftPreset() {
     ]),
     cat("🛡️ TEAM INTERN", [
       ch("💬・team-chat", "Interner Teamchat", ["Management", "Administrator", "Moderator", "Supporter"]),
+      ch("📜・team-regeln", "Verbindliche Regeln für alle Teammitglieder", ["Owner", "Management", "Teamleitung", "Senior Administrator", "Administrator", "Senior Moderator", "Moderator", "Senior Supporter", "Supporter", "Test Support"]),
       ch("📋・team-planung", "Aufgaben und Planung", ["Management", "Administrator"]),
       ch("🧾・reports", "Interne Meldungen und Reports", ["Management", "Administrator", "Moderator"]),
       ch("🟢・admin-dienst", "Admin-Dienststatus: Hier können Administratoren ihren Dienst starten oder beenden", ["Owner", "Management", "Administrator"]),
@@ -102,6 +104,7 @@ function createMinecraftPreset() {
       ch("📨・bewerbungen", "Bewerbungen für das Serverteam"),
       ch("🗂️・bewerbungsbearbeitung", "Bewerbungen intern bearbeiten", ["Owner", "Management", "Administrator"]),
       ch("🛡️・whitelist-bearbeitung", "Whitelist-Anträge prüfen und annehmen oder ablehnen", ["Owner", "Management", "Administrator"]),
+      ch("📁・spieler-register", "Privates Verzeichnis angenommener Minecraft-Spieler und Discord-Zuordnung", ["Owner", "Management", "Teamleitung", "Administrator"]),
       ch("📅・team-planung", "Aufgaben und Teamtermine", ["Owner", "Management", "Administrator"]),
       ch("📝・team-protokolle", "Interne Protokolle", ["Owner", "Management", "Administrator"])
     ]),

@@ -9,6 +9,10 @@ const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
+const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
+const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
+const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
+const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -142,6 +146,8 @@ client.once("clientReady", async () => {
     try { await joinSupportVoice(client, guild); }
     catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
   }
+  startMinecraftStatusUpdates(client);
+  startWeeklyBackups(client);
 });
 
 client.on("interactionCreate", async interaction => {
@@ -153,6 +159,7 @@ client.on("interactionCreate", async interaction => {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   }
   if (await handleApplicationInteraction(interaction)) return;
+  if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
     const [action, ownerId] = interaction.customId.split(":");
@@ -166,8 +173,9 @@ client.on("interactionCreate", async interaction => {
       await interaction.update({ content: "🧹 Server wird geleert. Bot-Befehle-Kanal bleibt erhalten …", components: [] });
       try {
         const guild = interaction.guild;
+        const safetyBackup = await createGuildBackup(guild, "Sicherheitsbackup vor /server-leeren");
         await guild.channels.fetch();
-        const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+        const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands", "backup-archiv", "backups", "papierkorb"]);
         const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
         const keepChannels = guild.channels.cache.filter(ch =>
           keepNames.has(ch.name.toLowerCase()) || communityKeepIds.has(ch.id)
@@ -190,7 +198,7 @@ client.on("interactionCreate", async interaction => {
         }
         await sendLog(guild, "🧹 Server-Leerung abgeschlossen. Gelöschte Kanäle: " + deletedChannels + ", gelöschte Rollen: " + deletedRoles + ".");
         return interaction.followUp({
-          content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Der Bot-Befehle-Kanal sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
+          content: "✅ Server-Leerung abgeschlossen. Gelöscht: **" + deletedChannels + " Kanäle** und **" + deletedRoles + " Rollen**. Fehlgeschlagen: **" + failedChannels + " Kanäle** und **" + failedRoles + " Rollen**. Sicherheitsbackup-ID: **" + safetyBackup.messageId + "**. Der Bot-Befehle-Kanal, das Backup-Archiv sowie @everyone, verwaltete und Bot-Rollen bleiben erhalten.",
           flags: MessageFlags.Ephemeral
         });
       } catch (error) {
@@ -278,8 +286,88 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren"].includes(interaction.commandName);
+    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren", "backup", "backup-wiederherstellen", "papierkorb"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen." });
+    if (interaction.commandName === "backup") {
+      try {
+        const result = await createGuildBackup(interaction.guild, "Manuelles Backup durch " + interaction.user.tag);
+        return interaction.editReply(`✅ Backup erstellt. Rollen: **${result.roles}**, Kanäle: **${result.channels}**. Backup-ID: \`${result.messageId}\` (im privaten #backup-archiv).`);
+      } catch (error) {
+        console.error("Backup fehlgeschlagen:", error);
+        return interaction.editReply("Backup fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "papierkorb") {
+      try {
+        const backups = await listBackups(interaction.guild, 10);
+        return interaction.editReply({ embeds: [backupListEmbed(backups)] });
+      } catch (error) {
+        return interaction.editReply("Backup-Archiv konnte nicht geladen werden: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "backup-wiederherstellen") {
+      try {
+        const backupId = interaction.options.getString("backup_id", true).trim();
+        if (!/^\d{17,20}$/.test(backupId)) return interaction.editReply("Bitte gib eine gültige Discord-Nachrichten-ID ein.");
+        const result = await restoreGuildBackup(interaction.guild, backupId);
+        return interaction.editReply(`✅ Wiederherstellung abgeschlossen. Neu erstellt: **${result.rolesCreated} Rollen**, **${result.categoriesCreated} Kategorien** und **${result.channelsCreated} Kanäle**. Bestehende Elemente wurden nicht gelöscht.`);
+      } catch (error) {
+        console.error("Backup-Wiederherstellung fehlgeschlagen:", error);
+        return interaction.editReply("Wiederherstellung fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "serverstatus") {
+      try {
+        const status = await updateGuildMinecraftStatus(interaction.guild);
+        if (!status) return interaction.editReply("Minecraft-Status konnte gerade nicht abgefragt werden. Bitte prüfe die Serveradresse und Railway-Logs.");
+        return interaction.editReply({
+          embeds: [statusEmbed(status, process.env.MINECRAFT_ADDRESS || DEFAULT_ADDRESS)]
+        });
+      } catch (error) {
+        return interaction.editReply("Minecraft-Status fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "beforderung") {
+      try {
+        const target = interaction.options.getMember("mitglied");
+        const reason = interaction.options.getString("grund", true);
+        return createPromotionRequest(interaction, target, reason);
+      } catch (error) {
+        console.error("Beförderungsantrag fehlgeschlagen:", error);
+        return interaction.editReply("Beförderungsantrag fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "spieler-eintragen") {
+      try {
+        const actor = await interaction.guild.members.fetch(interaction.user.id);
+        if (!canManagePlayerRegistry(actor)) return interaction.editReply("Nur Owner, Management, Teamleitung oder Administratoren dürfen Spieler eintragen.");
+        const name = interaction.options.getString("minecraft_name", true).trim();
+        const targetUser = interaction.options.getUser("mitglied", true);
+        const target = await interaction.guild.members.fetch(targetUser.id);
+        const result = await registerPlayer(interaction.guild, name, target, interaction.user);
+        let note = result.rconConfigured
+          ? "\nMinecraft-RCON: " + (result.rconResponse || "Whitelist-Befehl gesendet.")
+          : "\nHinweis: Der Eintrag ist im Discord-Spielerregister gespeichert. Die externe Minecraft-Whitelist muss manuell gepflegt werden (RCON_PASSWORD nicht gesetzt).";
+        if (result.rconError) note = "\nRCON-Fehler: " + result.rconError;
+        return interaction.editReply((result.updated ? "Spielereintrag aktualisiert." : "Spieler eingetragen.") + note);
+      } catch (error) {
+        return interaction.editReply("Spieler konnte nicht eingetragen werden: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "spieler-suchen") {
+      try {
+        const actor = await interaction.guild.members.fetch(interaction.user.id);
+        if (!canManagePlayerRegistry(actor)) return interaction.editReply("Nur Owner, Management, Teamleitung oder Administratoren dürfen das private Spielerregister durchsuchen.");
+        const query = interaction.options.getString("suche", true);
+        const results = await searchRegisteredPlayers(interaction.guild, query);
+        if (!results.length) return interaction.editReply("Keine passenden Spieler im Register gefunden.");
+        const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🔎 Spielerregister")
+          .setDescription(results.map(item => `**${item.minecraftName}** – ${item.discord} (<@${item.discordId}>)`).join("\n").slice(0, 4000));
+        return interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        return interaction.editReply("Spielersuche fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
     if (interaction.commandName === "website") {
       try {
         const html = buildWebsiteHtml(interaction.guild.name);
@@ -299,7 +387,7 @@ client.on("interactionCreate", async interaction => {
           .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
-        content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Ein Kanal namens **#bot-commands**, **#bot-befehle** oder **#botcommands** bleibt erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
+        content: "⚠️ **Achtung: Nicht rückgängig zu machen!** Ich lösche alle löschbaren Kanäle und Rollen. Die Kanäle **#bot-commands**, **#bot-befehle**, **#botcommands** und **#backup-archiv** bleiben erhalten. Slash-Befehle des Bots bleiben ebenfalls registriert. Wirklich fortfahren?",
         components: [row]
       });
     }
@@ -478,12 +566,15 @@ client.on("interactionCreate", async interaction => {
     pendingPlans.delete(key);
     await interaction.update({
       content: entry.replaceServer
-        ? "Baue den Server neu auf: lösche zuerst alte Kanäle und Rollen, danach erstelle ich das Minecraft-Layout …"
+        ? "Erstelle zuerst ein Sicherheitsbackup und baue danach den Server neu auf …"
         : "Erstelle Rollen, Kategorien und Kanäle … bitte kurz warten.",
       embeds: [], components: []
     });
 
     try {
+      const safetyBackup = entry.replaceServer
+        ? await createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")
+        : null;
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
         ownerId: interaction.user.id,
@@ -507,7 +598,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.${safetyBackup ? "\nSicherheitsbackup-ID: " + safetyBackup.messageId : ""}\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {

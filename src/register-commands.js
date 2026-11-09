@@ -30,6 +30,19 @@ const commands = [
         .setMaxLength(4000)
     ),
 
+  new SlashCommandBuilder().setName("backup").setDescription("Erstellt sofort ein Backup der Discord-Struktur"),
+  new SlashCommandBuilder().setName("backup-wiederherstellen").setDescription("Stellt fehlende Rollen und Kanäle aus einem Backup wieder her")
+    .addStringOption(o => o.setName("backup_id").setDescription("Nachrichten-ID des Backups aus #backup-archiv").setRequired(true)),
+  new SlashCommandBuilder().setName("papierkorb").setDescription("Zeigt die letzten Backups und Wiederherstellungspunkte"),
+  new SlashCommandBuilder().setName("serverstatus").setDescription("Zeigt den aktuellen Minecraft-Serverstatus"),
+  new SlashCommandBuilder().setName("beforderung").setDescription("Beantragt eine Team-Beförderung mit Freigabe")
+    .addUserOption(o => o.setName("mitglied").setDescription("Teammitglied").setRequired(true))
+    .addStringOption(o => o.setName("grund").setDescription("Begründung der Beförderung").setRequired(true).setMaxLength(1000)),
+  new SlashCommandBuilder().setName("spieler-eintragen").setDescription("Ordnet einen Minecraft-Namen einem Discord-Mitglied zu")
+    .addStringOption(o => o.setName("minecraft_name").setDescription("Minecraft-Java-Name").setRequired(true).setMaxLength(16))
+    .addUserOption(o => o.setName("mitglied").setDescription("Discord-Mitglied").setRequired(true)),
+  new SlashCommandBuilder().setName("spieler-suchen").setDescription("Sucht einen Spieler im privaten Spielerregister")
+    .addStringOption(o => o.setName("suche").setDescription("Minecraft-Name oder Discord-Name").setRequired(true).setMaxLength(64)),
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
   new SlashCommandBuilder().setName("bewerbung-panel").setDescription("Veröffentlicht das Team-Bewerbungsformular"),
   new SlashCommandBuilder().setName("whitelist-panel").setDescription("Veröffentlicht das Minecraft-Whitelist-Formular"),

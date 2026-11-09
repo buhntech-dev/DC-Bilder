@@ -120,7 +120,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   await guild.channels.fetch();
   await guild.roles.fetch();
-  const keepCommandNamesForCheck = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+  const keepCommandNamesForCheck = new Set(["bot-commands", "bot-befehle", "botcommands", "backup-archiv", "backups", "papierkorb"]);
   const communityKeepIdsForCheck = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
   const keptChannels = guild.channels.cache.filter(channel =>
     keepCommandNamesForCheck.has(channel.name.toLowerCase()) ||
@@ -300,7 +300,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
         name: channelName, type, parent: parent.id,
-        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId),
+        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId, botMemberForCheck.id),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
@@ -327,6 +327,27 @@ async function applyServerPlan(guild, plan, options = {}) {
           ].join("\n"))
           .setFooter({ text: "Minecraft Community • Bitte halte dich an die Regeln" });
         await createdChannel.send({ embeds: [rulesEmbed] });
+      }
+      if (/team-regeln/.test(channelName) && type === ChannelType.GuildText) {
+        const teamRules = new EmbedBuilder()
+          .setColor(0x9b59b6)
+          .setTitle("📜 Verbindliche Team-Regeln")
+          .setDescription([
+            "**1. Respekt:** Wir behandeln Mitglieder und Teamkollegen freundlich und professionell.",
+            "**2. Vertraulichkeit:** Interne Gespräche, Bewerbungen, Reports und persönliche Daten bleiben intern.",
+            "**3. Rechte:** Teamrechte werden nur für dienstliche Aufgaben genutzt. Machtmissbrauch ist verboten.",
+            "**4. Neutralität:** Entscheidungen erfolgen fair, nachvollziehbar und ohne persönliche Bevorzugung.",
+            "**5. Aktivität:** Abwesenheiten und längere Pausen werden der Teamleitung mitgeteilt.",
+            "**6. Support:** Tickets werden sachlich, zeitnah und vollständig bearbeitet.",
+            "**7. Beweise:** Sanktionen und wichtige Entscheidungen werden mit nachvollziehbaren Belegen dokumentiert.",
+            "**8. Kommunikation:** Interne Konflikte werden ruhig im passenden Teamkanal geklärt.",
+            "**9. Sicherheit:** Keine Tokens, Passwörter oder privaten Zugangsdaten in Discord teilen.",
+            "**10. Vorbildfunktion:** Teammitglieder halten die Serverregeln ein und repräsentieren die Community positiv.",
+            "",
+            "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
+          ].join("\n"))
+          .setFooter({ text: "Minecraft Community • Teamleitung" });
+        await createdChannel.send({ embeds: [teamRules] });
       }
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
@@ -379,7 +400,7 @@ async function applyServerPlan(guild, plan, options = {}) {
 function rolePermissions(name) {
   const p = PermissionFlagsBits;
   if (["owner", "inhaber"].includes(String(name).toLowerCase())) return [p.Administrator];
-  if (["management", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
+  if (["management", "teamleitung", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
     return [
       p.ManageChannels, p.ManageRoles, p.ManageMessages,
       p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
@@ -394,9 +415,10 @@ function rolePermissions(name) {
   return [];
 }
 
-function buildChannelOverwrites(guild, names, roleMap, ownerId) {
+function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   const roleNames = new Set((names || []).map(name => String(name).toLowerCase()));
   // Höhere Stufen der Teamleiter erhalten automatisch dieselben privaten Bereiche.
+  if (roleNames.has("management")) roleNames.add("teamleitung");
   if (roleNames.has("administrator")) roleNames.add("senior administrator");
   if (roleNames.has("moderator")) roleNames.add("senior moderator");
   if (roleNames.has("supporter")) {
@@ -420,6 +442,21 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId) {
         PermissionFlagsBits.Speak
       ]
     })));
+  }
+  // Der Bot erhält auch in privaten Kanälen expliziten Zugriff, damit Tickets,
+  // Statusmeldungen und Support-Sprachräume funktionieren.
+  if (botId) {
+    overwrites.push({
+      id: botId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak
+      ]
+    });
   }
   // Der konfigurierte Owner bekommt auf jedem neu erstellten Kanal explizit Zugriff,
   // auch wenn der Kanal eigentlich nur für Teamrollen vorgesehen ist.
