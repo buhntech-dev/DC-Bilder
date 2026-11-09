@@ -17,6 +17,17 @@ async function applyServerPlan(guild, plan, options = {}) {
   };
   const totalRoles = plan.roles.length;
   const totalChannels = plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
+
+  // Rechte vor jeder destruktiven Aktion prüfen, damit ein unvollständiger
+  // Bot-Invite nicht erst Kanäle löscht und danach beim Erstellen scheitert.
+  const botMemberForCheck = await guild.members.fetchMe();
+  const missing = [];
+  if (!botMemberForCheck.permissions.has(PermissionFlagsBits.Administrator) &&
+      !botMemberForCheck.permissions.has(PermissionFlagsBits.ManageChannels)) missing.push("Kanäle verwalten");
+  if (!botMemberForCheck.permissions.has(PermissionFlagsBits.Administrator) &&
+      !botMemberForCheck.permissions.has(PermissionFlagsBits.ManageRoles)) missing.push("Rollen verwalten");
+  if (missing.length) throw new Error("Dem Bot fehlen vor dem Aufbau diese Rechte: " + missing.join(" und ") + ". Es wurde nichts gelöscht.");
+
   let progressChannel = null;
   let progressMessage = null;
   let completedRoles = 0;
@@ -55,10 +66,15 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   // Nur /minecraft darf den bestehenden Server ersetzen.
   if (options.replaceServer === true) {
-    // Erst Kanäle löschen, damit keine alten Bereiche zurückbleiben.
+    // Alle Kanäle laden und Discord-Community-Pflichtkanäle erhalten.
+    await guild.channels.fetch();
     const keepCommandNames = new Set(["bot-commands", "bot-befehle", "botcommands"]);
+    const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
     const keepCommandChannels = guild.channels.cache.filter(channel =>
-      keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || channel.id === progressChannel.id
+      keepCommandNames.has(channel.name.toLowerCase()) ||
+      channel.id === options.keepChannelId ||
+      channel.id === progressChannel.id ||
+      communityKeepIds.has(channel.id)
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
@@ -74,6 +90,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
 
     // @everyone, verwaltete Integrationsrollen und die Bot-eigene Rolle bleiben bestehen.
+    await guild.roles.fetch();
     const botMember = await guild.members.fetchMe();
     const botHighest = botMember.roles.highest;
     const rolesToDelete = [...guild.roles.cache.values()]
