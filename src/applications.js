@@ -11,7 +11,7 @@ function textChannel(guild, candidates) {
 async function isReviewer(interaction) {
   const member = await interaction.guild.members.fetch(interaction.user.id);
   return member.permissions.has(PermissionFlagsBits.Administrator) ||
-    ["Owner", "Management", "Administrator", "Senior Administrator"].some(name =>
+    ["Owner", "Management", "Teamleitung", "Administrator", "Senior Administrator"].some(name =>
       member.roles.cache.some(role => role.name === name)
     );
 }
