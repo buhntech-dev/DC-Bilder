@@ -32,11 +32,24 @@ async function applyServerPlan(guild, plan, options = {}) {
     console.warn("Fortschrittsanzeige konnte nicht erstellt werden:", error.message);
     throw new Error("Der Fortschrittskanal konnte nicht erstellt werden. Prüfe die Berechtigung 'Kanäle verwalten'. " + error.message);
   }
+  try {
+  let lastProgressEdit = 0;
+  let lastProgressPercent = -1;
   const updateProgress = async (stage, detail, percent) => {
+    const now = Date.now();
+    // Discord-Message-Edits drosseln: der Serveraufbau darf nicht auf die
+    // Fortschrittsanzeige warten. 100% wird immer sofort geschrieben.
+    if (percent < 100 && now - lastProgressEdit < 1100) return;
     const filled = Math.max(0, Math.min(10, Math.round(percent / 10)));
     const bar = "🟩".repeat(filled) + "⬜".repeat(10 - filled);
-    await progressMessage.edit("📊 **Serveraufbau – Live-Fortschritt**\n**" + stage + "**\n" + detail + "\n" + bar + " **" + percent + "%**")
-      .catch(error => console.warn("Fortschritt konnte nicht aktualisiert werden:", error.message));
+    const content = "📊 **Serveraufbau – Live-Fortschritt**\\n**" + stage + "**\\n" + detail + "\\n" + bar + " **" + percent + "%**";
+    try {
+      await progressMessage.edit(content);
+      lastProgressEdit = Date.now();
+      lastProgressPercent = percent;
+    } catch (error) {
+      console.warn("Fortschritt konnte nicht aktualisiert werden:", error.message);
+    }
   };
 
   // Nur /minecraft darf den bestehenden Server ersetzen.
@@ -81,6 +94,30 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
 
+  // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
+  const createdRoleList = [];
+  for (const [index, role] of plan.roles.entries()) {
+    const name = cleanName(role.name, "Neue Rolle");
+    await updateProgress("Neue Rollen", "Erstelle " + name + " (" + (index + 1) + "/" + totalRoles + ")", 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
+    try {
+      const permissions = rolePermissions(name);
+      const createdRole = await guild.roles.create({
+        name, color: validColor(role.color), hoist: Boolean(role.hoist),
+        mentionable: Boolean(role.mentionable), permissions,
+        reason: "Discord Server Builder – vom Serverinhaber bestätigt"
+      });
+      createdRoles.set(name.toLowerCase(), createdRole);
+      createdRoleList.push({ role: createdRole, index });
+      created.roles++;
+    } catch (error) {
+      created.failedItems++;
+      created.errors.push("Rolle " + name + ": " + String(error.message || error));
+      console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
+    }
+    completedRoles++;
+    await updateProgress("Neue Rollen", "Abgeschlossen: " + completedRoles + "/" + totalRoles, 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
+  }
+
   // Eigene Bot-Rolle mit Administratorrechten erstellen und dem Bot zuweisen.
   // Discord erlaubt dies nur unterhalb der höchsten Rolle der Bot-Integration.
   const botMember = await guild.members.fetchMe();
@@ -105,29 +142,6 @@ async function applyServerPlan(guild, plan, options = {}) {
     await botMember.roles.add(botRole, "Bot-Verwaltungsrechte zuweisen");
   }
 
-  // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
-  const createdRoleList = [];
-  for (const [index, role] of plan.roles.entries()) {
-    const name = cleanName(role.name, "Neue Rolle");
-    await updateProgress("Neue Rollen", "Erstelle " + name + " (" + (index + 1) + "/" + totalRoles + ")", 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
-    try {
-      const permissions = rolePermissions(name);
-      const createdRole = await guild.roles.create({
-        name, color: validColor(role.color), hoist: Boolean(role.hoist),
-        mentionable: Boolean(role.mentionable), permissions,
-        reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-      });
-      createdRoles.set(name.toLowerCase(), createdRole);
-      createdRoleList.push({ role: createdRole, index });
-      created.roles++;
-    } catch (error) {
-      created.failedItems++;
-      created.errors.push("Rolle " + name + ": " + String(error.message || error));
-      console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
-    }
-    completedRoles++;
-    await updateProgress("Neue Rollen", "Abgeschlossen: " + completedRoles + "/" + totalRoles, 32 + Math.round(18 * completedRoles / Math.max(1, totalRoles)));
-  }
 
   // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
   const positions = createdRoleList
@@ -252,10 +266,17 @@ async function applyServerPlan(guild, plan, options = {}) {
     }
   }
   await updateProgress("Abgeschlossen", "Erstellt: " + created.roles + " Rollen, " + created.categories + " Kategorien und " + created.channels + " Kanäle. Fehler: " + created.failedItems, 100);
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  await progressChannel.delete("Fortschrittskanal nach erfolgreichem Serveraufbau entfernen")
-    .catch(error => console.warn("Fortschrittskanal konnte nicht gelöscht werden:", error.message));
+  await new Promise(resolve => setTimeout(resolve, 1200));
   return created;
+  } catch (error) {
+    console.error("[SERVER-BUILD] Aufbau abgebrochen:", error?.stack || error);
+    throw error;
+  } finally {
+    if (progressChannel) {
+      await progressChannel.delete("Temporärer Fortschrittskanal nach Abschluss oder Abbruch entfernen")
+        .catch(error => console.warn("Fortschrittskanal konnte nicht gelöscht werden:", error.message));
+    }
+  }
 }
 
 function rolePermissions(name) {
