@@ -1,7 +1,7 @@
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags,
   ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits
-} = require("discord.js");
+} = require("discord.js");\nconst { registerPlayer, findRegisteredPlayer } = require("./player-registry");
 
 function textChannel(guild, candidates) {
   const names = new Set(candidates.map(name => name.toLowerCase()));
@@ -154,6 +154,12 @@ async function handleApplicationInteraction(interaction) {
         await interaction.editReply("Die Rolle Mitglied oder der Minecraft-Name fehlt. Bitte prüfe die Anfrage.");
         return true;
       }
+      const existingRegistration = await findRegisteredPlayer(interaction.guild, minecraftName).catch(() => null);
+      const existingDiscordId = existingRegistration?.embeds?.[0]?.fields?.find(field => field.name === "Discord-ID")?.value;
+      if (existingDiscordId && existingDiscordId !== applicant.id) {
+        await interaction.editReply("Dieser Minecraft-Name ist bereits einem anderen Discord-Mitglied zugeordnet. Bitte prüfe den Antrag manuell.");
+        return true;
+      }
       const botMember = await interaction.guild.members.fetchMe();
       if (botMember.permissions.has(PermissionFlagsBits.Administrator) ||
           botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
@@ -166,6 +172,13 @@ async function handleApplicationInteraction(interaction) {
         resultNote = " Die Mitglied-Rolle wurde vergeben, aber dem Bot fehlt die Berechtigung Nicknames verwalten.";
       }
       await applicant.roles.add(memberRole, "Minecraft-Whitelist angenommen");
+      try {
+        const registry = await registerPlayer(interaction.guild, minecraftName, applicant, interaction.user);
+        if (!registry.rconConfigured) resultNote += " Der Spieler ist im privaten Discord-Register gespeichert; die externe Minecraft-Whitelist muss manuell ergänzt werden (RCON nicht konfiguriert).";
+        if (registry.rconError) resultNote += " RCON-Fehler: " + registry.rconError;
+      } catch (registryError) {
+        resultNote += " Interner Registereintrag fehlgeschlagen: " + String(registryError.message || registryError).slice(0, 180);
+      }
       await applicant.send("✅ Deine Whitelist-Anfrage wurde angenommen." + (resultNote ? " Dein Discord-Name konnte eventuell nicht automatisch geändert werden." : " Dein Discord-Name wurde auf **" + minecraftName + "** gesetzt.")).catch(() => {});
     } else {
       await applicant.send("Deine " + (kind === "application" ? "Team-Bewerbung" : "Whitelist-Anfrage") + " wurde leider abgelehnt. Bei Fragen wende dich bitte an das Team.").catch(() => {});
