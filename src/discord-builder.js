@@ -132,7 +132,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     try {
       const permissions = rolePermissions(name);
       const createdRole = await guild.roles.create({
-        name, color: validColor(role.color), hoist: Boolean(role.hoist),
+        name, colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) }, hoist: Boolean(role.hoist),
         mentionable: Boolean(role.mentionable), permissions,
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       });
@@ -154,7 +154,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   let botRole = guild.roles.cache.find(role => role.name === "Bot" && !role.managed);
   if (!botRole) {
     botRole = await guild.roles.create({
-      name: "Bot", color: "#5865F2", hoist: true,
+      name: "Bot", colors: { primaryColor: 0x5865F2 }, hoist: true,
       permissions: [PermissionFlagsBits.Administrator],
       reason: "Discord Server Builder – Bot-Verwaltungsrolle"
     });
