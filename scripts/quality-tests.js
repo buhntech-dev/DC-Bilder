@@ -466,6 +466,17 @@ async function test(name, fn) {
     assert.equal(channel.type, ChannelType.GuildVoice);
   });
 
+  await test("Opus-Encoder kann den Support-Signalton codieren", () => {
+    const OpusScript = require("opusscript");
+    const encoder = new OpusScript(48000, 2, OpusScript.Application.AUDIO);
+    try {
+      const encoded = encoder.encode(createSupportChime().subarray(0, 3840));
+      assert.ok(encoded && encoded.length > 0);
+    } finally {
+      encoder.delete();
+    }
+  });
+
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
