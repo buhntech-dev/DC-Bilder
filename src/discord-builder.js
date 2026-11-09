@@ -18,6 +18,21 @@ function throwIfBuildAborted(signal) {
   }
 }
 
+async function mapWithConcurrency(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function runWorker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  }
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker());
+  await Promise.all(workers);
+  return results;
+}
+
 function cleanName(value, fallback) {
   const name = String(value || fallback).trim().slice(0, 90);
   return name || fallback;
@@ -167,7 +182,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     catch (progressError) { console.warn("[SERVER-BUILD] Fortschrittsmeldung fehlgeschlagen:", progressError.message); }
   };
   const createdRoleList = [];
-  for (const [index, role] of plan.roles.entries()) {
+  await mapWithConcurrency(plan.roles, 3, async (role, index) => {
     throwIfBuildAborted(options.signal);
     const name = cleanName(role.name, "Neue Rolle");
     try {
@@ -199,11 +214,12 @@ async function applyServerPlan(guild, plan, options = {}) {
       }
       await reportProgress("Rollen: **" + created.roles + "/" + plan.roles.length + "** von **" + plan.roles.length + "** erstellt. Als Nächstes kommen Kategorien und Kanäle …");
     } catch (error) {
+      if (error?.code === "BUILD_ABORTED") throw error;
       created.failedItems++;
       created.errors.push("Rolle " + name + ": " + String(error.message || error));
       console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
     }
-  }
+  });
 
   // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
   const positions = createdRoleList
@@ -237,7 +253,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   for (const category of plan.categories) {
     throwIfBuildAborted(options.signal);
     categoryIndex++;
-    await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …", true);
+    await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
     try {
       parent = await guild.channels.create({
@@ -253,13 +269,12 @@ async function applyServerPlan(guild, plan, options = {}) {
       continue;
     }
 
-    let channelIndex = 0;
-    for (const channel of category.channels) {
+    await mapWithConcurrency(category.channels, 3, async (channel, channelIndex) => {
       throwIfBuildAborted(options.signal);
-      channelIndex++;
+      const displayChannelIndex = channelIndex + 1;
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
       try {
-      await reportProgress("Kategorie " + categoryIndex + "/" + plan.categories.length + " – Kanal " + channelIndex + "/" + category.channels.length + ": **#" + channelName + "** …");
+      await reportProgress("Kategorie " + categoryIndex + "/" + plan.categories.length + " – Kanal " + displayChannelIndex + "/" + category.channels.length + ": **#" + channelName + "** …");
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
         name: channelName, type, parent: parent.id,
@@ -322,11 +337,12 @@ async function applyServerPlan(guild, plan, options = {}) {
         await createdChannel.send({ embeds: [embed], components: [row] });
       }
       } catch (error) {
+        if (error?.code === "BUILD_ABORTED") throw error;
         created.failedItems++;
         created.errors.push("Kanal " + channelName + ": " + String(error.message || error));
         console.error("[SERVER-BUILD] Kanal fehlgeschlagen:", channelName, error);
       }
-    }
+    });
   }
   return created;
   } catch (error) {
