@@ -315,6 +315,28 @@ async function test(name, fn) {
     assert.ok(!unsafe.includes('href="javascript:'));
   });
 
+
+  await test("Minecraft-Status-Aktualisierung startet beim Bot-Start", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("startMinecraftStatusUpdates(client)"));
+  });
+  await test("Wöchentliche Backups starten beim Bot-Start", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("startWeeklyBackups(client)"));
+  });
+  await test("Server-Neuaufbau erstellt zuerst ein Sicherheitsbackup", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    const backup = source.indexOf('createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")');
+    const build = source.indexOf("applyServerPlan(interaction.guild, entry.plan");
+    assert.ok(backup >= 0 && build > backup);
+  });
+  await test("Server-Leerung erstellt vor dem Löschen ein Sicherheitsbackup", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    const wipe = source.indexOf('createGuildBackup(guild, "Sicherheitsbackup vor /server-leeren")');
+    const deletion = source.indexOf('channel.delete("Serverinhaber hat /server-leeren bestätigt")');
+    assert.ok(wipe >= 0 && deletion > wipe);
+  });
+
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
