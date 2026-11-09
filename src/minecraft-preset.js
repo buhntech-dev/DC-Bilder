@@ -84,7 +84,7 @@ function createMinecraftPreset() {
       ch("💤・AFK", "Abwesende Mitglieder", [], "voice")
     ]),
     cat("🛡️ TEAM INTERN", [
-      ch("💬・team-chat", "Interner Teamchat", ["Management", "Administrator", "Moderator", "Supporter"]),
+      ch("💬・team-chat", "Interner Teamchat", ["Management", "Administrator", "Moderator", "Supporter"]),\n      ch("📜・team-regeln", "Verbindliche Regeln für alle Teammitglieder", ["Owner", "Management", "Senior Administrator", "Administrator", "Senior Moderator", "Moderator", "Senior Supporter", "Supporter", "Test Support"]),
       ch("📋・team-planung", "Aufgaben und Planung", ["Management", "Administrator"]),
       ch("🧾・reports", "Interne Meldungen und Reports", ["Management", "Administrator", "Moderator"]),
       ch("🟢・admin-dienst", "Admin-Dienststatus: Hier können Administratoren ihren Dienst starten oder beenden", ["Owner", "Management", "Administrator"]),
