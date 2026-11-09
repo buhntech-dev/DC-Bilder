@@ -229,8 +229,8 @@ client.on("interactionCreate", async interaction => {
         pendingPlans.set(key, { plan, replaceServer: true, createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`reviewreplace:${interaction.user.id}`)
-            .setLabel("Kompletten Neuaufbau bestätigen")
+            .setCustomId(`finalreplace:${interaction.user.id}`)
+            .setLabel("Ja – Minecraft-Server neu aufbauen")
             .setStyle(ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
@@ -370,7 +370,7 @@ client.on("interactionCreate", async interaction => {
       );
       return interaction.editReply({
         content: (isMinecraft || isProfiMine)
-          ? (isProfiMine ? "Prüfe ProfiMine Ultimate. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung." : "Prüfe den Minecraft-Aufbau. Beim Fortfahren kommt noch eine letzte Lösch-Bestätigung.")
+          ? (isProfiMine ? "Prüfe ProfiMine Ultimate und bestätige den Neuaufbau." : "Prüfe den Minecraft-Aufbau und bestätige den Neuaufbau.")
           : "Dein Serverplan ist fertig. Prüfe ihn und bestätige die Umsetzung:",
         embeds: [planEmbed(plan, isMinecraft)], components: [row]
       });
