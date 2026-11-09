@@ -12,6 +12,7 @@ const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
 const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
+const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -331,6 +332,37 @@ client.on("interactionCreate", async interaction => {
       } catch (error) {
         console.error("Beförderungsantrag fehlgeschlagen:", error);
         return interaction.editReply("Beförderungsantrag fehlgeschlagen: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "spieler-eintragen") {
+      try {
+        const actor = await interaction.guild.members.fetch(interaction.user.id);
+        if (!canManagePlayerRegistry(actor)) return interaction.editReply("Nur Owner, Management, Teamleitung oder Administratoren dürfen Spieler eintragen.");
+        const name = interaction.options.getString("minecraft_name", true).trim();
+        const targetUser = interaction.options.getUser("mitglied", true);
+        const target = await interaction.guild.members.fetch(targetUser.id);
+        const result = await registerPlayer(interaction.guild, name, target, interaction.user);
+        let note = result.rconConfigured
+          ? "\nMinecraft-RCON: " + (result.rconResponse || "Whitelist-Befehl gesendet.")
+          : "\nHinweis: Der Eintrag ist im Discord-Spielerregister gespeichert. Die externe Minecraft-Whitelist muss manuell gepflegt werden (RCON_PASSWORD nicht gesetzt).";
+        if (result.rconError) note = "\nRCON-Fehler: " + result.rconError;
+        return interaction.editReply((result.updated ? "Spielereintrag aktualisiert." : "Spieler eingetragen.") + note);
+      } catch (error) {
+        return interaction.editReply("Spieler konnte nicht eingetragen werden: " + String(error.message || error).slice(0, 500));
+      }
+    }
+    if (interaction.commandName === "spieler-suchen") {
+      try {
+        const actor = await interaction.guild.members.fetch(interaction.user.id);
+        if (!canManagePlayerRegistry(actor)) return interaction.editReply("Nur Owner, Management, Teamleitung oder Administratoren dürfen das private Spielerregister durchsuchen.");
+        const query = interaction.options.getString("suche", true);
+        const results = await searchRegisteredPlayers(interaction.guild, query);
+        if (!results.length) return interaction.editReply("Keine passenden Spieler im Register gefunden.");
+        const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🔎 Spielerregister")
+          .setDescription(results.map(item => `**${item.minecraftName}** – ${item.discord} (<@${item.discordId}>)`).join("\n").slice(0, 4000));
+        return interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        return interaction.editReply("Spielersuche fehlgeschlagen: " + String(error.message || error).slice(0, 500));
       }
     }
     if (interaction.commandName === "website") {
