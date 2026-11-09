@@ -113,8 +113,8 @@ async function handlePromotionInteraction(interaction) {
       return true;
     }
     const oldRole = interaction.guild.roles.cache.find(role => role.name === TEAM_RANKS[fromIndex]);
-    if (oldRole) await target.roles.remove(oldRole, "Beförderung freigegeben durch " + interaction.user.tag);
     await target.roles.add(nextRole, "Beförderung freigegeben durch " + interaction.user.tag);
+    if (oldRole) await target.roles.remove(oldRole, "Beförderung freigegeben durch " + interaction.user.tag);
     await target.send(`🎉 Herzlichen Glückwunsch! Deine Beförderung zu **${nextRank}** wurde von ${interaction.user.tag} genehmigt.`).catch(() => {});
     await interaction.editReply(`✅ ${target.user.tag} wurde zu **${nextRank}** befördert.`);
     const embed = EmbedBuilder.from(interaction.message.embeds[0])
