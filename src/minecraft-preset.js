@@ -8,7 +8,7 @@ function cat(name, channels) { return { name, channels }; }
 function createMinecraftPreset() {
   const roles = [
     { name: "Owner", color: "#E74C3C", hoist: true, mentionable: false },
-    { name: "Management", color: "#9B59B6", hoist: true, mentionable: false },
+    { name: "Management", color: "#9B59B6", hoist: true, mentionable: false },\n    { name: "Teamleitung", color: "#8E44AD", hoist: true, mentionable: false },
     { name: "Senior Administrator", color: "#C0392B", hoist: true, mentionable: false },
     { name: "Administrator", color: "#E67E22", hoist: true, mentionable: false },
     { name: "Admin im Dienst", color: "#2ECC71", hoist: true, mentionable: false },
