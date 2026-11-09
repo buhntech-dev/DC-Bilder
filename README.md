@@ -10,7 +10,10 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 - `/build prompt`: kostenloser regelbasierter Planer für weitere Serverideen
 - `/plan prompt`: zeigt nur einen Plan, ohne Änderungen
 - `/website`: erstellt eine responsive HTML-Website als Datei im aktuellen Kanal
-- `/ticketpanel`, `/clear`, `/kick`, `/ban`, `/timeout`, `/announce`, `/lock`, `/unlock`, `/slowmode`, `/serverinfo`, `/server-leeren`
+- `/ticketpanel`, `/bewerbung-panel`, `/whitelist-panel`, `/clear`, `/kick`, `/ban`, `/timeout`, `/announce`, `/lock`, `/unlock`, `/slowmode`, `/serverinfo`, `/server-leeren`
+- Team-Bewerbungen mit Formular, Annahme/Ablehnung und automatischer Rolle `Test Support`
+- Whitelist-Anträge mit Formular, Annahme/Ablehnung, Discord-Nickname auf Minecraft-Namen und Rolle `Mitglied`
+- Interner Whitelist-Prüfkanal sowie Team-Rangstufen bis Senior Administrator
 
 ## Railway
 - Build Command: `npm install`
@@ -47,5 +50,6 @@ npm run check
 ## Grenzen
 - `/website` erzeugt eine HTML-Datei. Sie wird nicht automatisch öffentlich gehostet.
 - `/profimine` und `/minecraft` ersetzen nach doppelter Bestätigung vorhandene löschbare Kanäle und Rollen. System-, Integrations- und Bot-Rollen bleiben erhalten.
+- Whitelist-Annahmen ändern den Discord-Nickname und vergeben die Discord-Rolle. Eine externe Aternos-Whitelist wird nicht automatisch geändert.
 - Die Website und Serverlayouts verwenden Beispielangaben. Prüfe insbesondere die Minecraft-Adresse vor der Veröffentlichung.
 - Der Bot kann keinen neuen Discord-Server in deinem Account anlegen; er richtet einen Server ein, auf dem er bereits eingeladen ist.
