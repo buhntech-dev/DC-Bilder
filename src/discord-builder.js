@@ -137,29 +137,46 @@ async function applyServerPlan(guild, plan, options = {}) {
   }
 
   // Rollen in definierter Reihenfolge erstellen und anschließend sortieren.
-  const reportProgress = async message => {
-    if (typeof options.onProgress === "function") {
-      try { await options.onProgress(message); }
-      catch (progressError) { console.warn("[SERVER-BUILD] Fortschrittsmeldung fehlgeschlagen:", progressError.message); }
-    }
+  let lastProgressAt = 0;
+  const reportProgress = async (message, force = false) => {
+    if (typeof options.onProgress !== "function") return;
+    const now = Date.now();
+    // Discord-Webhooks nicht mit einer Meldung pro Kanal überlasten.
+    if (!force && now - lastProgressAt < 1800) return;
+    lastProgressAt = now;
+    try { await options.onProgress(message); }
+    catch (progressError) { console.warn("[SERVER-BUILD] Fortschrittsmeldung fehlgeschlagen:", progressError.message); }
   };
   const createdRoleList = [];
   for (const [index, role] of plan.roles.entries()) {
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
-      await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …");
+      await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
       console.log("[SERVER-BUILD] Erstelle Rolle:", name);
+      // Erst die Rolle sicher anlegen, danach Berechtigungen separat setzen.
+      // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
       const createdRole = await guild.roles.create({
-        name, colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) }, hoist: Boolean(role.hoist),
-        mentionable: Boolean(role.mentionable), permissions,
+        name,
+        color: parseInt(validColor(role.color).slice(1), 16),
+        hoist: Boolean(role.hoist),
+        mentionable: Boolean(role.mentionable),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       });
       console.log("[SERVER-BUILD] Rolle erstellt:", name, createdRole.id);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
       created.roles++;
-      await reportProgress("Rollen: **" + created.roles + "/" + plan.roles.length + "** erstellt. Als Nächstes kommen Kategorien und Kanäle …");
+      if (permissions.length) {
+        try {
+          await createdRole.setPermissions(permissions, "Discord Server Builder – Rollenrechte setzen");
+        } catch (permissionError) {
+          created.failedItems++;
+          created.errors.push("Berechtigungen für Rolle " + name + ": " + String(permissionError.message || permissionError));
+          console.error("[SERVER-BUILD] Rollenrechte konnten nicht gesetzt werden:", name, permissionError);
+        }
+      }
+      await reportProgress("Rollen: **" + created.roles + "/" + plan.roles.length + "** von **" + plan.roles.length + "** erstellt. Als Nächstes kommen Kategorien und Kanäle …");
     } catch (error) {
       created.failedItems++;
       created.errors.push("Rolle " + name + ": " + String(error.message || error));
@@ -198,7 +215,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   let categoryIndex = 0;
   for (const category of plan.categories) {
     categoryIndex++;
-    await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
+    await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …", true);
     let parent;
     try {
       parent = await guild.channels.create({
