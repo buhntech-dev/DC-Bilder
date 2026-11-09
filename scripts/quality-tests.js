@@ -232,8 +232,8 @@ async function test(name, fn) {
   });
   await test("Support-Signalton hat Stereo-PCM-Samples", () => {
     const audio = createSupportChime();
-    assert.notEqual(audio.readInt16LE(0), 0);
-    assert.equal(audio.readInt16LE(0), audio.readInt16LE(2));
+    assert.notEqual(audio.readInt16LE(200), 0);
+    assert.equal(audio.readInt16LE(200), audio.readInt16LE(202));
   });
 
 
