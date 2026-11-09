@@ -30,3 +30,77 @@ for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMin
   process.stdout.write("OK " + name + ": " + preset.roles.length + " Rollen, " + preset.categories.length + " Kategorien, " + channels.length + " Kanäle.\n");
 }
 process.stdout.write("Alle JavaScript- und Preset-Prüfungen bestanden.\n");
+
+
+// Integrationstest des kompletten Aufbaus mit einer Discord-API-Simulation.
+async function testBuilderAgainstMockGuild(presetName, presetFactory) {
+  const { Collection, ChannelType } = require("discord.js");
+  const { applyServerPlan } = require("../src/discord-builder");
+  const guildId = "mock-guild";
+  const channels = new Collection();
+  const roles = new Collection();
+  let nextId = 1;
+  const id = () => "mock-" + nextId++;
+  const makeRole = (name, position, managed = false) => ({
+    id: id(), name, position, managed,
+    comparePositionTo(other) { return this.position - other.position; },
+    async setPermissions() {},
+    async delete() { roles.delete(this.id); }
+  });
+  const everyone = makeRole("@everyone", 0);
+  everyone.id = guildId;
+  roles.set(everyone.id, everyone);
+  const botRole = makeRole("Bot", 100);
+  roles.set(botRole.id, botRole);
+  const botMember = { permissions: { has: () => true }, roles: { highest: botRole } };
+  const ownerMember = { roles: { async add() {} } };
+  const guild = {
+    id: guildId, ownerId: "mock-owner", rulesChannelId: null, publicUpdatesChannelId: null,
+    roles: {
+      cache: roles, everyone,
+      async fetch() { return roles; },
+      async create(options) { const role = makeRole(options.name, 10); roles.set(role.id, role); return role; },
+      async setPositions() {}
+    },
+    channels: {
+      cache: channels,
+      async fetch() { return channels; },
+      async create(options) {
+        const channel = {
+          id: id(), name: options.name, type: options.type, parentId: options.parent || null,
+          async send() {},
+          async delete() { channels.delete(this.id); },
+          isTextBased() { return this.type === ChannelType.GuildText; }
+        };
+        channels.set(channel.id, channel);
+        return channel;
+      }
+    },
+    members: { async fetchMe() { return botMember; }, async fetch() { return ownerMember; } }
+  };
+  const oldChannel = {
+    id: id(), name: "alter-kanal", type: ChannelType.GuildText, parentId: null,
+    async delete() { channels.delete(this.id); }, isTextBased() { return true; }
+  };
+  channels.set(oldChannel.id, oldChannel);
+  const oldRole = makeRole("Alte Rolle", 1);
+  roles.set(oldRole.id, oldRole);
+
+  const plan = presetFactory();
+  const expectedChannels = plan.categories.reduce((sum, category) => sum + category.channels.length, 0);
+  const result = await applyServerPlan(guild, plan, { replaceServer: true, ownerId: "mock-owner" });
+  if (result.roles !== plan.roles.length) throw new Error(presetName + ": Rollen unvollständig " + result.roles + "/" + plan.roles.length);
+  if (result.categories !== plan.categories.length) throw new Error(presetName + ": Kategorien unvollständig " + result.categories + "/" + plan.categories.length);
+  if (result.channels !== expectedChannels) throw new Error(presetName + ": Kanäle unvollständig " + result.channels + "/" + expectedChannels);
+  if (result.failedItems !== 0 || result.failedDeletes !== 0) throw new Error(presetName + ": Fehler im Mock-Aufbau " + JSON.stringify(result.errors.slice(0, 5)));
+  if (result.deletedChannels !== 1 || result.deletedRoles !== 1) throw new Error(presetName + ": Altbestand nicht entfernt.");
+  process.stdout.write("OK " + presetName + ": Mock-Neuaufbau – " + result.roles + " Rollen, " + result.categories + " Kategorien, " + result.channels + " Kanäle.\\n");
+}
+
+(async () => {
+  await testBuilderAgainstMockGuild("Minecraft", createMinecraftPreset);
+  await testBuilderAgainstMockGuild("ProfiMine", createProfiMinePreset);
+})().catch(error => {
+  console.error("Builder-Integrationstest fehlgeschlagen:", error);
+  process.exitCode = 1;
+});
