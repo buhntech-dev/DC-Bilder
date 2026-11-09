@@ -211,10 +211,6 @@ client.on("interactionCreate", async interaction => {
         if (!isOwner(interaction)) {
           return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
         }
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ||
-            !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
-          return interaction.editReply("Dir fehlen die Berechtigungen **Kanäle verwalten** und **Rollen verwalten**.");
-        }
         const plan = createMinecraftPreset();
         const key = `${interaction.guildId}:${interaction.user.id}`;
         pendingPlans.set(key, { plan, replaceServer: true, createdAt: Date.now() });
@@ -260,9 +256,6 @@ client.on("interactionCreate", async interaction => {
     };
     const needed = permissions[interaction.commandName];
     if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung.", ephemeral: true });
-    if (ownerOnly && (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles))) {
-      return interaction.editReply({ content: "Dir fehlen Kanäle verwalten und Rollen verwalten.", ephemeral: true });
-    }
     if (!ownerOnly) {
       try {
         const cmd = interaction.commandName;
