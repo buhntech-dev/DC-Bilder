@@ -146,6 +146,8 @@ client.once("clientReady", async () => {
     try { await joinSupportVoice(client, guild); }
     catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
   }
+  startMinecraftStatusUpdates(client);
+  startWeeklyBackups(client);
 });
 
 client.on("interactionCreate", async interaction => {
@@ -171,6 +173,7 @@ client.on("interactionCreate", async interaction => {
       await interaction.update({ content: "🧹 Server wird geleert. Bot-Befehle-Kanal bleibt erhalten …", components: [] });
       try {
         const guild = interaction.guild;
+        const safetyBackup = await createGuildBackup(guild, "Sicherheitsbackup vor /server-leeren");
         await guild.channels.fetch();
         const keepNames = new Set(["bot-commands", "bot-befehle", "botcommands", "backup-archiv", "backups", "papierkorb"]);
         const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
