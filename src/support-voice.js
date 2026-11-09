@@ -106,7 +106,7 @@ async function joinSupportVoice(client, guild) {
        botMember.permissions.has(PermissionFlagsBits.Administrator))) {
     await channel.permissionOverwrites.edit(botMember.id, {
       ViewChannel: true, Connect: true, Speak: true, UseVAD: true
-    }, { reason: "Bot-Zugriff auf Support-Sprachkanal sicherstellen" });
+    }, "Bot-Zugriff auf Support-Sprachkanal sicherstellen");
     permissions = channel.permissionsFor(botMember);
   }
   if (!permissions?.has(["ViewChannel", "Connect", "Speak"])) {
