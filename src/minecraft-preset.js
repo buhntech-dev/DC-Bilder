@@ -104,6 +104,7 @@ function createMinecraftPreset() {
       ch("📨・bewerbungen", "Bewerbungen für das Serverteam"),
       ch("🗂️・bewerbungsbearbeitung", "Bewerbungen intern bearbeiten", ["Owner", "Management", "Administrator"]),
       ch("🛡️・whitelist-bearbeitung", "Whitelist-Anträge prüfen und annehmen oder ablehnen", ["Owner", "Management", "Administrator"]),
+      ch("📁・spieler-register", "Privates Verzeichnis angenommener Minecraft-Spieler und Discord-Zuordnung", ["Owner", "Management", "Teamleitung", "Administrator"]),
       ch("📅・team-planung", "Aufgaben und Teamtermine", ["Owner", "Management", "Administrator"]),
       ch("📝・team-protokolle", "Interne Protokolle", ["Owner", "Management", "Administrator"])
     ]),
