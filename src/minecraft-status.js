@@ -1,5 +1,5 @@
 const net = require("node:net");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, ChannelType, PermissionFlagsBits } = require("discord.js");
 
 const DEFAULT_ADDRESS = "Communety.aternos.me:18884";
 const POLL_INTERVAL_MS = 30_000;
@@ -126,17 +126,55 @@ function statusEmbed(status, address) {
   return embed;
 }
 
+function buildStatusChannelOverwrites(guild, botId) {
+  const overwrites = [{
+    id: guild.roles.everyone?.id || guild.id,
+    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory],
+    deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.AddReactions]
+  }];
+  if (botId) overwrites.push({
+    id: botId,
+    allow: [
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.ReadMessageHistory,
+      PermissionFlagsBits.SendMessages,
+      PermissionFlagsBits.EmbedLinks,
+      PermissionFlagsBits.ManageMessages
+    ]
+  });
+  return overwrites;
+}
+
+async function ensureStatusChannel(guild) {
+  await guild.channels.fetch();
+  let channel = guild.channels.cache.find(item =>
+    item.type === ChannelType.GuildText &&
+    ["📡・server-status", "server-status", "minecraft-status"].includes(item.name.toLowerCase())
+  );
+  if (channel) return channel;
+  const botMember = await guild.members.fetchMe();
+  if (!botMember.permissions.has(PermissionFlagsBits.ManageChannels) &&
+      !botMember.permissions.has(PermissionFlagsBits.Administrator)) {
+    throw new Error("Statuskanal fehlt und der Bot darf keine Kanäle erstellen.");
+  }
+  channel = await guild.channels.create({
+    name: "server-status",
+    type: ChannelType.GuildText,
+    topic: "Automatischer Minecraft-Status: online/offline, Spielerzahl und Version (alle 30 Sekunden).",
+    permissionOverwrites: buildStatusChannelOverwrites(guild, botMember.id),
+    reason: "Automatischen Minecraft-Statuskanal einrichten"
+  });
+  console.log("[MC-STATUS] Statuskanal erstellt: #" + channel.name + " auf " + guild.name);
+  return channel;
+}
+
 async function updateGuildMinecraftStatus(guild) {
   if (statusLocks.has(guild.id)) return null;
   statusLocks.add(guild.id);
   try {
     const address = process.env.MINECRAFT_ADDRESS || DEFAULT_ADDRESS;
     const status = await queryMinecraftServer(address);
-    await guild.channels.fetch();
-    const channel = guild.channels.cache.find(item =>
-      item.isTextBased() && ["📡・server-status", "server-status", "minecraft-status"].includes(item.name.toLowerCase())
-    );
-    if (!channel) return status;
+    const channel = await ensureStatusChannel(guild);
     const recent = await channel.messages.fetch({ limit: 15 }).catch(() => null);
     const existing = recent?.find(message =>
       message.author.id === guild.client.user.id &&
@@ -174,5 +212,5 @@ function startMinecraftStatusUpdates(client) {
 module.exports = {
   DEFAULT_ADDRESS, POLL_INTERVAL_MS, encodeVarInt, decodeVarInt,
   parseMinecraftAddress, parseStatusPacket, queryMinecraftServer,
-  statusEmbed, updateGuildMinecraftStatus, startMinecraftStatusUpdates
+  statusEmbed, buildStatusChannelOverwrites, ensureStatusChannel, updateGuildMinecraftStatus, startMinecraftStatusUpdates
 };
