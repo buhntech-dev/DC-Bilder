@@ -6,8 +6,8 @@ const { buildWebsiteHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
 const { panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS } = require("../src/minecraft-status");
-const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess } = require("../src/team-promotions");
-const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild } = require("../src/backups");
+const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
+const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { createSupportChime } = require("../src/support-voice");
 
 let passed = 0;
