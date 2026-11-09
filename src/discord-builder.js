@@ -21,15 +21,22 @@ function throwIfBuildAborted(signal) {
 async function mapWithConcurrency(items, concurrency, worker) {
   const results = new Array(items.length);
   let nextIndex = 0;
+  let firstError = null;
   async function runWorker() {
-    while (true) {
+    while (!firstError) {
       const index = nextIndex++;
       if (index >= items.length) return;
-      results[index] = await worker(items[index], index);
+      try {
+        results[index] = await worker(items[index], index);
+      } catch (error) {
+        if (!firstError) firstError = error;
+      }
     }
   }
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker());
+  // Auf alle bereits gestarteten Discord-Aufrufe warten, bevor die Build-Sperre frei wird.
   await Promise.all(workers);
+  if (firstError) throw firstError;
   return results;
 }
 
