@@ -23,7 +23,7 @@ const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
 if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
 }
-const client = new Client({ intents });
+const client = new Client({ intents, rest: { timeout: 20000 } });
 const pendingPlans = new Map();
 
 function isOwner(interaction) {
@@ -463,7 +463,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nGelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\nDer Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
