@@ -300,7 +300,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
       const channelOptions = {
         name: channelName, type, parent: parent.id,
-        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId),
+        permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId, botMemberForCheck.id),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
@@ -415,7 +415,7 @@ function rolePermissions(name) {
   return [];
 }
 
-function buildChannelOverwrites(guild, names, roleMap, ownerId) {
+function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   const roleNames = new Set((names || []).map(name => String(name).toLowerCase()));
   // Höhere Stufen der Teamleiter erhalten automatisch dieselben privaten Bereiche.
   if (roleNames.has("management")) roleNames.add("teamleitung");\n  if (roleNames.has("administrator")) roleNames.add("senior administrator");
@@ -441,6 +441,21 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId) {
         PermissionFlagsBits.Speak
       ]
     })));
+  }
+  // Der Bot erhält auch in privaten Kanälen expliziten Zugriff, damit Tickets,
+  // Statusmeldungen und Support-Sprachräume funktionieren.
+  if (botId) {
+    overwrites.push({
+      id: botId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak
+      ]
+    });
   }
   // Der konfigurierte Owner bekommt auf jedem neu erstellten Kanal explizit Zugriff,
   // auch wenn der Kanal eigentlich nur für Teamrollen vorgesehen ist.
