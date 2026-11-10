@@ -326,11 +326,14 @@ async function test(name, fn) {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
     assert.ok(source.includes("startWeeklyBackups(client)"));
   });
-  await test("Server-Neuaufbau erstellt zuerst ein Sicherheitsbackup", () => {
+  await test("Server-Neuaufbau startet ohne automatisches Backup", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
-    const backup = source.indexOf('createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")');
-    const build = source.indexOf("applyServerPlan(interaction.guild, entry.plan");
-    assert.ok(backup >= 0 && build > backup);
+    assert.ok(!source.includes('createGuildBackup(interaction.guild, "Automatisches Sicherheitsbackup vor Minecraft-Neuaufbau")'));
+    assert.ok(source.includes("applyServerPlan(interaction.guild, entry.plan"));
+  });
+  await test("Backup-Archiv wird beim vollständigen Neuaufbau nicht behalten", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
+    assert.ok(!source.includes('"backup-archiv", "backups", "papierkorb"'));
   });
   await test("Server-Leerung erstellt vor dem Löschen ein Sicherheitsbackup", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
