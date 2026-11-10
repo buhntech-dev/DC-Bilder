@@ -548,7 +548,7 @@ async function test(name, fn) {
     await updater.flush();
     await updater.stop();
     assert.ok(edits.length >= 2);
-    assert.ok(edits.every(value => value === "Schritt 2"));
+    assert.ok(edits.every(value => value.includes("Schritt 2") && value.includes("🛠️ **Serveraufbau – To-do-Liste**")));\n    assert.ok(edits.every(value => !value.includes("Schritt 1")));
   });
   await test("Fortschritts-To-do-Liste zeigt alle fünf Arbeitsschritte", () => {
     const checklist = renderTodoChecklist(0, "Start");
