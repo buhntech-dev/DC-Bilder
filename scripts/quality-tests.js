@@ -349,7 +349,7 @@ async function test(name, fn) {
     assert.ok(source.includes("pendingPlans.set(planId"));
     assert.ok(source.includes("pendingPlans.get(planId)"));
     assert.ok(source.includes("finalreplace:${interaction.user.id}:${planId}"));
-    assert.ok(source.includes(" : planId"));
+    assert.ok(source.includes("cancel:${interaction.user.id}:${planId}"));
   });
   await test("Abgelaufene Vorlagen werden automatisch aufgeräumt", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
