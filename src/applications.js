@@ -6,7 +6,7 @@ const { registerPlayer, findRegisteredPlayer } = require("./player-registry");
 
 function normalizeChannelName(value) {
   return String(value || "").toLowerCase().normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/\\p{M}/gu, "")
     .replace(/[^a-z0-9]/g, "");
 }
 
