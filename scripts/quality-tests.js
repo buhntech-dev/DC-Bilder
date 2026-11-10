@@ -4,7 +4,7 @@ const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecra
 const { createServerPlan } = require("../src/ai");
 const { buildWebsiteHtml, escapeHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
-const { panelRow } = require("../src/applications");
+const { normalizeChannelName, textChannel, isReviewer, panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS, buildStatusChannelOverwrites, ensureStatusChannel } = require("../src/minecraft-status");
 const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
@@ -30,6 +30,30 @@ async function test(name, fn) {
   const mc = createMinecraftPreset();
   const pro = createProfiMinePreset();
 
+  await test("Bewerbungskanal-Namen werden trotz Emojis erkannt", () => {
+    assert.equal(normalizeChannelName("📁・bewerbungen-team"), "bewerbungenteam");
+    assert.equal(normalizeChannelName("🗂️・bewerbungsbearbeitung"), "bewerbungsbearbeitung");
+  });
+  await test("Bewerbungskanal-Suche akzeptiert Emoji-Kanalnamen", () => {
+    const channel = { name: "🗂️・bewerbungsbearbeitung", isTextBased: () => true };
+    const guild = { channels: { cache: { find(fn) { return [channel].find(fn); } } } };
+    assert.equal(textChannel(guild, ["bewerbungsbearbeitung"]), channel);
+  });
+  await test("Senior Moderator kann Bewerbungen mitprüfen", async () => {
+    const member = { permissions: { has: () => false }, roles: { cache: [{ name: "Senior Moderator" }] } };
+    const guild = { members: { async fetch() { return member; } } };
+    const interaction = { guild, user: { id: "reviewer" } };
+    assert.equal(await isReviewer(interaction), true);
+  });
+  await test("Bewerbungs- und Whitelist-Panels werden beim Aufbau automatisch erstellt", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
+    assert.ok(source.includes('setCustomId("application_open")'));
+    assert.ok(source.includes('setCustomId("whitelist_open")'));
+  });
+  await test("Destruktiver Neuaufbau behält den aufrufenden Befehlskanal", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("keepChannelId: interaction.channelId"));
+  });
   await test("Minecraft-Preset liefert ein Objekt", () => assert.equal(typeof mc, "object"));
   await test("Minecraft-Preset hat einen Namen", () => assert.equal(mc.serverName, "Minecraft Community"));
   await test("Minecraft-Preset hat eine Zusammenfassung", () => assert.ok(mc.summary.length > 20));
@@ -586,7 +610,8 @@ async function test(name, fn) {
   });
   await test("Build löscht Fortschrittskanal nach Abschluss", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
-    assert.ok(source.includes('keepChannelId: progressChannel?.id || interaction.channelId'));
+    assert.ok(source.includes("keepChannelId: interaction.channelId"));
+    assert.ok(source.includes("keepChannelIds: progressChannel ? [progressChannel.id] : []"));
     assert.ok(source.includes('progressChannel.delete("Temporärer Fortschrittskanal automatisch entfernt")'));
   });
 

@@ -592,7 +592,10 @@ client.on("interactionCreate", async interaction => {
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
         ownerId: interaction.user.id,
-        keepChannelId: progressChannel?.id || interaction.channelId,
+        // Den ursprünglichen Befehlskanal immer behalten: Discord-Interaktions-Webhooks
+        // sind an diesen Kanal gebunden und schlagen sonst mit Unknown Channel (10003) fehl.
+        keepChannelId: interaction.channelId,
+        keepChannelIds: progressChannel ? [progressChannel.id] : [],
         signal: buildAbortController.signal,
         onProgress: message => {
           if (progressUpdater) progressUpdater.update(message);

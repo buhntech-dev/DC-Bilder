@@ -125,7 +125,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   const communityKeepIdsForCheck = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
   const keptChannels = guild.channels.cache.filter(channel =>
     keepCommandNamesForCheck.has(channel.name.toLowerCase()) ||
-    channel.id === options.keepChannelId ||
+    (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) ||
     communityKeepIdsForCheck.has(channel.id)
   );
   const keptParentIds = new Set(keptChannels.map(channel => channel.parentId).filter(Boolean));
@@ -151,13 +151,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
     const keepCommandChannels = guild.channels.cache.filter(channel =>
       keepCommandNames.has(channel.name.toLowerCase()) ||
-      channel.id === options.keepChannelId ||
+      (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) ||
       communityKeepIds.has(channel.id)
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
       throwIfBuildAborted(buildSignal);
-      if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || communityKeepIds.has(channel.id)) continue;
+      if (keepCommandNames.has(channel.name.toLowerCase()) || (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
@@ -362,6 +362,26 @@ async function applyServerPlan(guild, plan, options = {}) {
             .setLabel("Regeln akzeptieren & bestätigen")
             .setStyle(ButtonStyle.Success)
             .setEmoji("✅")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
+      if (/bewerbungen?/.test(channelName) && !/(?:bewerbungen-team|bewerbungsbearbeitung)/.test(channelName) && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle("📝 Team-Bewerbung")
+          .setDescription("Du möchtest Teil unseres Teams werden? Klicke auf **Bewerbung starten** und fülle das Formular aus. Deine Bewerbung wird vertraulich vom Team geprüft.");
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("application_open").setLabel("Bewerbung starten").setStyle(ButtonStyle.Success).setEmoji("📝")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
+      if (/whitelist/.test(channelName) && !/whitelist-bearbeitung/.test(channelName) && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x2ECC71)
+          .setTitle("🛡️ Minecraft-Whitelist")
+          .setDescription("Du möchtest auf den Minecraft-Server? Klicke auf **Whitelist beantragen** und sende deinen Minecraft-Namen. Das Team prüft deinen Antrag.");
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("whitelist_open").setLabel("Whitelist beantragen").setStyle(ButtonStyle.Success).setEmoji("🛡️")
         );
         await createdChannel.send({ embeds: [embed], components: [row] });
       }

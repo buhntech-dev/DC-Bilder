@@ -4,15 +4,23 @@ const {
 } = require("discord.js");
 const { registerPlayer, findRegisteredPlayer } = require("./player-registry");
 
+function normalizeChannelName(value) {
+  return String(value || "").toLowerCase().normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
 function textChannel(guild, candidates) {
-  const names = new Set(candidates.map(name => name.toLowerCase()));
-  return guild.channels.cache.find(channel => channel.isTextBased() && names.has(channel.name.toLowerCase()));
+  const names = new Set(candidates.map(normalizeChannelName));
+  return guild.channels.cache.find(channel =>
+    channel.isTextBased() && names.has(normalizeChannelName(channel.name))
+  );
 }
 
 async function isReviewer(interaction) {
   const member = await interaction.guild.members.fetch(interaction.user.id);
   return member.permissions.has(PermissionFlagsBits.Administrator) ||
-    ["Owner", "Management", "Teamleitung", "Administrator", "Senior Administrator"].some(name =>
+    ["Owner", "Management", "Teamleitung", "Administrator", "Senior Administrator", "Senior Moderator"].some(name =>
       member.roles.cache.some(role => role.name === name)
     );
 }
@@ -68,7 +76,8 @@ async function handleApplicationInteraction(interaction) {
       await interaction.editReply("Bitte gib einen gültigen Minecraft-Namen mit 3–16 Zeichen ein (Buchstaben, Zahlen und Unterstrich).");
       return true;
     }
-    const review = textChannel(interaction.guild, ["📁・bewerbungen-team", "bewerbungsbearbeitung"]);
+    await interaction.guild.channels.fetch();
+    const review = textChannel(interaction.guild, ["📁・bewerbungen-team", "🗂️・bewerbungsbearbeitung", "bewerbungsbearbeitung"]);
     if (!review) {
       await interaction.editReply("Der interne Bewerbungskanal fehlt. Bitte baue den Minecraft-Server mit /minecraft neu auf.");
       return true;
@@ -100,6 +109,7 @@ async function handleApplicationInteraction(interaction) {
       await interaction.editReply("Bitte gib einen gültigen Minecraft-Namen mit 3–16 Zeichen ein.");
       return true;
     }
+    await interaction.guild.channels.fetch();
     const review = textChannel(interaction.guild, ["🛡️・whitelist-bearbeitung", "whitelist-bearbeitung"]);
     if (!review) {
       await interaction.editReply("Der interne Whitelist-Kanal fehlt. Bitte baue den Minecraft-Server mit /minecraft neu auf.");
@@ -200,4 +210,4 @@ async function handleApplicationInteraction(interaction) {
   return false;
 }
 
-module.exports = { handleApplicationInteraction, panelRow };
+module.exports = { normalizeChannelName, textChannel, isReviewer, handleApplicationInteraction, panelRow };
