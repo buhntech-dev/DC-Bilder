@@ -125,7 +125,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   const communityKeepIdsForCheck = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
   const keptChannels = guild.channels.cache.filter(channel =>
     keepCommandNamesForCheck.has(channel.name.toLowerCase()) ||
-    channel.id === options.keepChannelId ||
+    (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) ||
     communityKeepIdsForCheck.has(channel.id)
   );
   const keptParentIds = new Set(keptChannels.map(channel => channel.parentId).filter(Boolean));
@@ -151,13 +151,13 @@ async function applyServerPlan(guild, plan, options = {}) {
     const communityKeepIds = new Set([guild.rulesChannelId, guild.publicUpdatesChannelId].filter(Boolean));
     const keepCommandChannels = guild.channels.cache.filter(channel =>
       keepCommandNames.has(channel.name.toLowerCase()) ||
-      channel.id === options.keepChannelId ||
+      (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) ||
       communityKeepIds.has(channel.id)
     );
     const keepCommandCategories = new Set(keepCommandChannels.map(channel => channel.parentId).filter(Boolean));
     for (const channel of [...guild.channels.cache.values()]) {
       throwIfBuildAborted(buildSignal);
-      if (keepCommandNames.has(channel.name.toLowerCase()) || channel.id === options.keepChannelId || communityKeepIds.has(channel.id)) continue;
+      if (keepCommandNames.has(channel.name.toLowerCase()) || (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
