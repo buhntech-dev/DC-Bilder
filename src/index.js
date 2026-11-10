@@ -599,6 +599,9 @@ client.on("interactionCreate", async interaction => {
           else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
         }
       });
+      if (progressUpdater) {
+        progressUpdater.complete(`Fertig: ${result.roles} Rollen, ${result.categories} Kategorien und ${result.channels} Kanäle verarbeitet.`);
+      }
       const dutyChannel = interaction.guild.channels.cache.find(ch => ch.name === "🟢・admin-dienst" || ch.name === "admin-dienst");
       if (dutyChannel && dutyChannel.isTextBased()) {
         const recent = await dutyChannel.messages.fetch({ limit: 30 }).catch(() => null);
@@ -620,6 +623,7 @@ client.on("interactionCreate", async interaction => {
       });
     } catch (error) {
       console.error(error);
+      if (progressUpdater) progressUpdater.fail(String(error.message || error).slice(0, 300));
       await interaction.followUp({
         content: `Beim Erstellen ist ein Fehler aufgetreten: ${String(error.message || error).slice(0, 800)}. Bereits gelöschte/erstellte Elemente werden nicht automatisch zurückgesetzt.`,
         flags: MessageFlags.Ephemeral
