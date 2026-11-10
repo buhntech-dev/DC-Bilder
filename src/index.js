@@ -163,7 +163,7 @@ client.on("interactionCreate", async interaction => {
   if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
-    const [action, ownerId] = interaction.customId.split(":");
+    const [action, ownerId, planId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
       return interaction.reply({ content: "Nur der konfigurierte Serverinhaber darf das ausführen.", flags: MessageFlags.Ephemeral });
     }
@@ -265,11 +265,15 @@ client.on("interactionCreate", async interaction => {
           return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
         }
         const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : createMinecraftPreset();
-        const key = `${interaction.guildId}:${interaction.user.id}`;
-        pendingPlans.set(key, { plan, replaceServer: true, createdAt: Date.now() });
+        // Jeder Plan bekommt eine eigene ID. Mehrere offene Vorlagen überschreiben sich nicht.
+        for (const [id, saved] of pendingPlans) {
+          if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
+        }
+        const planId = interaction.id;
+        pendingPlans.set(planId, { plan, replaceServer: true, createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`finalreplace:${interaction.user.id}`)
+            .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
             .setLabel("Ja – Minecraft-Server neu aufbauen")
             .setStyle(ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
@@ -499,11 +503,15 @@ client.on("interactionCreate", async interaction => {
           : await createServerPlan(interaction.options.getString("prompt", true));
       if (interaction.commandName === "plan") return interaction.editReply({ embeds: [planEmbed(plan)] });
 
-      const key = `${interaction.guildId}:${interaction.user.id}`;
-      pendingPlans.set(key, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
+      // Ein eigener Eintrag pro Vorschau erlaubt beliebig viele nacheinander erstellte Vorlagen.
+      for (const [id, saved] of pendingPlans) {
+        if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
+      }
+      const planId = interaction.id;
+      pendingPlans.set(planId, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}`)
+          .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}:${planId}`)
           .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
           .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
@@ -547,15 +555,14 @@ client.on("interactionCreate", async interaction => {
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
       return interaction.reply({ content: "Diese Schaltfläche gehört nicht zu dir.", flags: MessageFlags.Ephemeral });
     }
-    const key = `${interaction.guildId}:${interaction.user.id}`;
-    const entry = pendingPlans.get(key);
+    const entry = planId ? pendingPlans.get(planId) : null;
     if (!entry || Date.now() - entry.createdAt > 15 * 60 * 1000) {
-      pendingPlans.delete(key);
+      if (planId) pendingPlans.delete(planId);
       return interaction.reply({ content: "Der Plan ist abgelaufen. Bitte starte den Befehl erneut.", flags: MessageFlags.Ephemeral });
     }
 
     if (action === "cancel") {
-      pendingPlans.delete(key);
+      pendingPlans.delete(planId);
       return interaction.update({ content: "Abgebrochen. Es wurde nichts gelöscht oder erstellt.", embeds: [], components: [] });
     }
 
@@ -564,7 +571,7 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: "Ungültige Bestätigung.", flags: MessageFlags.Ephemeral });
     }
 
-    pendingPlans.delete(key);
+    pendingPlans.delete(planId);
     await interaction.update({
       content: entry.replaceServer
         ? "Der Server wird neu aufgebaut …"
