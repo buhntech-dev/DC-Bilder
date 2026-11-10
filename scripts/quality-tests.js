@@ -610,7 +610,8 @@ async function test(name, fn) {
   });
   await test("Build löscht Fortschrittskanal nach Abschluss", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
-    assert.ok(source.includes('keepChannelId: progressChannel?.id || interaction.channelId'));
+    assert.ok(source.includes("keepChannelId: interaction.channelId"));
+    assert.ok(source.includes("keepChannelIds: progressChannel ? [progressChannel.id] : []"));
     assert.ok(source.includes('progressChannel.delete("Temporärer Fortschrittskanal automatisch entfernt")'));
   });
 
