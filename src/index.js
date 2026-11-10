@@ -163,7 +163,7 @@ client.on("interactionCreate", async interaction => {
   if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
-    const [action, ownerId, planId] = interaction.customId.split(":");
+    const [action, ownerId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
       return interaction.reply({ content: "Nur der konfigurierte Serverinhaber darf das ausführen.", flags: MessageFlags.Ephemeral });
     }
@@ -276,7 +276,7 @@ client.on("interactionCreate", async interaction => {
             .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
             .setLabel("Ja – Minecraft-Server neu aufbauen")
             .setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
+          new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
         return interaction.editReply({
@@ -551,7 +551,7 @@ client.on("interactionCreate", async interaction => {
   }
 
   if (interaction.isButton()) {
-    const [action, ownerId] = interaction.customId.split(":");
+    const [action, ownerId, planId] = interaction.customId.split(":");
     if (ownerId !== interaction.user.id || !isOwner(interaction)) {
       return interaction.reply({ content: "Diese Schaltfläche gehört nicht zu dir.", flags: MessageFlags.Ephemeral });
     }
