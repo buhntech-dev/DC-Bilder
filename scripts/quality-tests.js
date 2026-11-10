@@ -343,6 +343,19 @@ async function test(name, fn) {
   });
 
 
+  await test("Mehrere Vorlagen erhalten eigene Bestätigungs-IDs", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("const planId = interaction.id"));
+    assert.ok(source.includes("pendingPlans.set(planId"));
+    assert.ok(source.includes("pendingPlans.get(planId)"));
+    assert.ok(source.includes("finalreplace:${interaction.user.id}:${planId}"));
+    assert.ok(source.includes(" : planId"));
+  });
+  await test("Abgelaufene Vorlagen werden automatisch aufgeräumt", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("Date.now() - saved.createdAt > 15 * 60 * 1000"));
+  });
+
   await test("Leere Spielersuche wird abgelehnt", async () => await assert.rejects(() => searchRegisteredPlayers(null, "   "), /Suche/i));
   await test("Backup-Wiederherstellung legt fehlende Rollen und Kanäle an", async () => {
     const { Collection, ChannelType } = require("discord.js");
