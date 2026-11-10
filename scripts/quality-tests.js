@@ -10,7 +10,7 @@ const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createProm
 const { isoWeekKey, berlinParts, backupListEmbed, serializeGuild, createGuildBackup, restoreGuildBackup, startWeeklyBackups } = require("../src/backups");
 const { searchRegisteredPlayers } = require("../src/player-registry");
 const { createSupportChime, buildSupportVoiceOverwrites, ensureSupportVoiceChannel } = require("../src/support-voice");
-const { PROGRESS_TOPIC_PREFIX, buildProgressOverwrites, cleanupStaleProgressChannels, createProgressChannel, createProgressUpdater } = require("../src/progress-channel");
+const { PROGRESS_TOPIC_PREFIX, TODO_STEPS, renderTodoChecklist, progressStepFromDetail, buildProgressOverwrites, cleanupStaleProgressChannels, createProgressChannel, createProgressUpdater } = require("../src/progress-channel");
 const { validMinecraftName, canManagePlayerRegistry, playerEmbed } = require("../src/player-registry");
 const { createRconPacket, readRconPacket, addMinecraftWhitelist, executeRconCommand } = require("../src/minecraft-rcon");
 
@@ -549,6 +549,39 @@ async function test(name, fn) {
     await updater.stop();
     assert.ok(edits.length >= 2);
     assert.ok(edits.every(value => value === "Schritt 2"));
+  });
+  await test("Fortschritts-To-do-Liste zeigt alle fünf Arbeitsschritte", () => {
+    const checklist = renderTodoChecklist(0, "Start");
+    assert.equal(TODO_STEPS.length, 5);
+    for (const step of TODO_STEPS) assert.ok(checklist.includes(step));
+    assert.ok(checklist.includes("🔄"));
+    assert.ok(checklist.includes("▫️"));
+  });
+  await test("Rollenfortschritt hakt Vorbereitung und Serverstruktur ab", () => {
+    const step = progressStepFromDetail("Erstelle Rolle 1/12: Owner", 0);
+    const checklist = renderTodoChecklist(step, "Erstelle Rolle 1/12: Owner");
+    assert.equal(step, 2);
+    assert.ok(checklist.includes("✔️ ~~Vorbereitung und Rechte prüfen~~"));
+    assert.ok(checklist.includes("✔️ ~~Serverstruktur vorbereiten~~"));
+    assert.ok(checklist.includes("🔄 **Rollen erstellen**"));
+  });
+  await test("Kanalfortschritt hakt Rollen ab und aktiviert Kategorien/Kanäle", () => {
+    const step = progressStepFromDetail("Erstelle Kategorie 1/8: START", 2);
+    const checklist = renderTodoChecklist(step, "Erstelle Kategorie 1/8: START");
+    assert.equal(step, 3);
+    assert.ok(checklist.includes("✔️ ~~Rollen erstellen~~"));
+    assert.ok(checklist.includes("🔄 **Kategorien und Kanäle erstellen**"));
+  });
+  await test("Abgeschlossene To-do-Liste zeigt ausschließlich Haken", () => {
+    const checklist = renderTodoChecklist(TODO_STEPS.length, "Alles erstellt", true, false);
+    assert.ok(checklist.includes("✅ **Serveraufbau abgeschlossen**"));
+    assert.equal((checklist.match(/✔️/g) || []).length, TODO_STEPS.length);
+    assert.ok(!checklist.includes("▫️"));
+  });
+  await test("Fehlgeschlagener Fortschrittsschritt wird mit X markiert", () => {
+    const checklist = renderTodoChecklist(2, "Discord API Fehler", false, true);
+    assert.ok(checklist.includes("❌ **Rollen erstellen**"));
+    assert.ok(checklist.includes("⚠️ **Serveraufbau mit Fehler beendet**"));
   });
   await test("Build löscht Fortschrittskanal nach Abschluss", () => {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
