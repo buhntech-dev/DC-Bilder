@@ -365,6 +365,26 @@ async function applyServerPlan(guild, plan, options = {}) {
         );
         await createdChannel.send({ embeds: [embed], components: [row] });
       }
+      if (/bewerbungen?/.test(channelName) && !/(?:bewerbungen-team|bewerbungsbearbeitung)/.test(channelName) && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle("📝 Team-Bewerbung")
+          .setDescription("Du möchtest Teil unseres Teams werden? Klicke auf **Bewerbung starten** und fülle das Formular aus. Deine Bewerbung wird vertraulich vom Team geprüft.");
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("application_open").setLabel("Bewerbung starten").setStyle(ButtonStyle.Success).setEmoji("📝")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
+      if (/whitelist/.test(channelName) && !/whitelist-bearbeitung/.test(channelName) && type === ChannelType.GuildText) {
+        const embed = new EmbedBuilder()
+          .setColor(0x2ECC71)
+          .setTitle("🛡️ Minecraft-Whitelist")
+          .setDescription("Du möchtest auf den Minecraft-Server? Klicke auf **Whitelist beantragen** und sende deinen Minecraft-Namen. Das Team prüft deinen Antrag.");
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("whitelist_open").setLabel("Whitelist beantragen").setStyle(ButtonStyle.Success).setEmoji("🛡️")
+        );
+        await createdChannel.send({ embeds: [embed], components: [row] });
+      }
       if (/ticket-erstellen/.test(channelName) && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
           .setColor(0x5865F2)
