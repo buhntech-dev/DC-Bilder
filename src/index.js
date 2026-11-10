@@ -514,7 +514,7 @@ client.on("interactionCreate", async interaction => {
           .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}:${planId}`)
           .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
           .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}`)
+        new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
           .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
       );
       return interaction.editReply({
