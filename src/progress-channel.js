@@ -47,8 +47,34 @@ async function createProgressChannel(guild, requesterId, botId) {
     permissionOverwrites: buildProgressOverwrites(guild, requesterId, botId),
     reason: "Temporären Fortschrittskanal für den Serveraufbau erstellen"
   });
-  const message = await channel.send("⏳ **Serveraufbau wird vorbereitet …**");
+  const message = await channel.send(renderTodoChecklist(0, "Serveraufbau wird vorbereitet …"));
   return { channel, message };
+}
+
+const TODO_STEPS = [
+  "Vorbereitung und Rechte prüfen",
+  "Serverstruktur vorbereiten",
+  "Rollen erstellen",
+  "Kategorien und Kanäle erstellen",
+  "Abschluss und Kontrolle"
+];
+
+function renderTodoChecklist(currentStep = 0, detail = "Wird vorbereitet …", completed = false, failed = false) {
+  const lines = TODO_STEPS.map((label, index) => {
+    if (completed || index < currentStep) return "✔️ ~~" + label + "~~";
+    if (failed && index === currentStep) return "❌ **" + label + "**";
+    if (index === currentStep) return "🔄 **" + label + "**";
+    return "▫️ " + label;
+  });
+  const heading = completed ? "✅ **Serveraufbau abgeschlossen**" : failed ? "⚠️ **Serveraufbau mit Fehler beendet**" : "🛠️ **Serveraufbau – To-do-Liste**";
+  return [heading, "", ...lines, "", "**Aktueller Schritt:** " + String(detail || "Serveraufbau läuft …")].join("\n").slice(0, 1900);
+}
+
+function progressStepFromDetail(text, currentStep) {
+  const value = String(text || "");
+  if (/Erstelle Rolle/i.test(value)) return Math.max(currentStep, 2);
+  if (/^Rollen:/i.test(value) || /Erstelle Kategorie/i.test(value) || /Kategorie .*Kanal/i.test(value)) return Math.max(currentStep, 3);
+  return currentStep;
 }
 
 function createProgressUpdater(interaction, progressMessage, intervalMs = 1200) {
@@ -56,16 +82,42 @@ function createProgressUpdater(interaction, progressMessage, intervalMs = 1200) 
   let timer = null;
   let stopped = false;
   let flushing = null;
+  let currentStep = 0;
+  let currentDetail = "Serveraufbau wird vorbereitet …";
+  let completed = false;
+  let failed = false;
 
-  function update(text) {
-    if (stopped) return;
-    latestText = String(text || "Serveraufbau läuft …").slice(0, 1900);
-    if (timer || flushing) return;
+  function schedule() {
+    if (timer || flushing || stopped) return;
     timer = setTimeout(() => {
       timer = null;
       void flush();
     }, intervalMs);
     timer.unref?.();
+  }
+
+  function update(text) {
+    if (stopped || completed || failed) return;
+    currentDetail = String(text || "Serveraufbau läuft …");
+    currentStep = progressStepFromDetail(currentDetail, currentStep);
+    latestText = renderTodoChecklist(currentStep, currentDetail);
+    schedule();
+  }
+
+  function complete(detail = "Alle Rollen, Kategorien und Kanäle wurden verarbeitet.") {
+    if (stopped) return;
+    completed = true;
+    currentDetail = detail;
+    latestText = renderTodoChecklist(TODO_STEPS.length, currentDetail, true, false);
+    schedule();
+  }
+
+  function fail(detail = "Bitte prüfe die Fehlermeldung in Discord oder Railway.") {
+    if (stopped) return;
+    failed = true;
+    currentDetail = detail;
+    latestText = renderTodoChecklist(currentStep, currentDetail, false, true);
+    schedule();
   }
 
   async function flush() {
@@ -89,10 +141,10 @@ function createProgressUpdater(interaction, progressMessage, intervalMs = 1200) 
     await flush();
   }
 
-  return { update, flush, stop };
+  return { update, complete, fail, flush, stop };
 }
 
 module.exports = {
-  PROGRESS_TOPIC_PREFIX, buildProgressOverwrites,
+  PROGRESS_TOPIC_PREFIX, TODO_STEPS, renderTodoChecklist, progressStepFromDetail, buildProgressOverwrites,
   cleanupStaleProgressChannels, createProgressChannel, createProgressUpdater
 };
