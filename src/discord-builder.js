@@ -83,11 +83,12 @@ function validateServerPlan(plan) {
 
 async function applyServerPlan(guild, plan, options = {}) {
   validateServerPlan(plan);
-  // Einen älteren Aufbau auf demselben Discord stoppen und auslaufen lassen,
-  // bevor der neue Aufbau Discord-Änderungen startet.
+  // Mehrere bestätigte Befehle dürfen nacheinander ausgeführt werden.
+  // Einen laufenden Aufbau niemals durch den nächsten Befehl abbrechen:
+  // der nächste wartet, bis der vorherige vollständig beendet ist.
   while (activeBuildGuilds.has(guild.id)) {
     const previousBuild = activeBuildGuilds.get(guild.id);
-    previousBuild.controller.abort();
+    console.log("[SERVER-BUILD] Weiterer bestätigter Aufbau wartet auf den laufenden Aufbau:", guild.id);
     await previousBuild.done;
   }
   const controller = new AbortController();
