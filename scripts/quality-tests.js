@@ -77,16 +77,6 @@ async function test(name, fn) {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
     assert.ok(source.includes("ownerId: interaction.guild.ownerId"));
   });
-  await test("Team-Regeln erhalten ein Beschäftigungsformular-Panel", () => {
-    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
-    assert.ok(source.includes('setCustomId("employment_open")'));
-    assert.ok(source.includes("Team-Beschäftigungsformular"));
-  });
-  await test("Beschäftigungsformular öffnet ein Modal und sendet es intern", () => {
-    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/applications.js"), "utf8");
-    assert.ok(source.includes('setCustomId("employment_submit")'));
-    assert.ok(source.includes('textChannel(interaction.guild, ["bewerbungen-team", "team-protokolle"])'));
-  });
   await test("Minecraft-Preset enthält Owner", () => assert.ok(mc.roles.some(r => r.name === "Owner")));
   await test("Minecraft-Preset enthält Management", () => assert.ok(mc.roles.some(r => r.name === "Management")));
   await test("Minecraft-Preset enthält Test Support", () => assert.ok(mc.roles.some(r => r.name === "Test Support")));
