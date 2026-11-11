@@ -460,7 +460,7 @@ client.on("interactionCreate", async interaction => {
         return interaction.editReply("✅ /" + commandName + " wurde für " + target.toString() + " freigegeben.");
       }
       if (role && target.roles.cache.has(role.id)) {
-        await target.roles.remove(role, "Bot-Befehl /" + commandName + " durch " + interaction.user.tag entzogen");
+        await target.roles.remove(role, "Bot-Befehl /" + commandName + " durch " + interaction.user.tag + " entzogen");
       }
       return interaction.editReply("✅ /" + commandName + " wurde für " + target.toString() + " entzogen.");
     }
