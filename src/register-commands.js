@@ -89,7 +89,7 @@ async function main() {
   }
   const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
   await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-  console.log("Slash-Befehle registriert: /build, /plan, /minecraft, /profimine, /website und Verwaltung.");
+  console.log("Slash-Befehle registriert: /build, /plan, /minecraft, /profimine, /robloxfeuerwehr, /website und Verwaltung.");
 }
 main().catch(error => {
   console.error(error);
