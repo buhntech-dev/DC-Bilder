@@ -493,7 +493,7 @@ client.on("interactionCreate", async interaction => {
           "",
           "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
         ].join("\n"))
-        .setFooter({ text: "Minecraft Community • Teamleitung" });
+        .setFooter({ text: (interaction.guild.name || "Community") + " • Teamleitung" });
       const confirmRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("team_rules_confirm")
           .setLabel("Team-Regeln bestätigen").setStyle(ButtonStyle.Success).setEmoji("✅")
@@ -682,11 +682,11 @@ client.on("interactionCreate", async interaction => {
       if (member.roles.cache.has(memberRole.id)) {
         return interaction.editReply("Du bist bereits bestätigt. Viel Spaß auf dem Server!");
       }
-      await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
+      await member.roles.add(memberRole, "Discord: Regeln über Bestätigungsbutton akzeptiert");
       await sendRuleLog(interaction.guild, "✅ **Regel akzeptiert:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln bestätigt und die Rolle **Mitglied** erhalten.");
       return interaction.editReply("✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!");
     } catch (error) {
-      console.error("Fehler bei Minecraft-Verifizierung:", error);
+      console.error("Fehler bei der Discord-Regelbestätigung:", error);
       return interaction.editReply("Die Bestätigung ist fehlgeschlagen. Bitte prüfe, ob der Bot **Rollen verwalten** besitzt und seine Bot-Rolle über der Rolle **Mitglied** steht.");
     }
   }
