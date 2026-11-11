@@ -1,5 +1,10 @@
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
+function buildRolePositions(createdRoleList) {
+  return createdRoleList.slice().sort((a, b) => b.index - a.index)
+    .map(({ role }, index) => ({ role: role.id, position: Math.max(1, index + 1) }));
+}
+
 const activeBuildGuilds = new Map();
 
 // Ein Neustart beendet den bisherigen Node-Prozess und damit alle laufenden Builds.
@@ -244,13 +249,7 @@ async function applyServerPlan(guild, plan, options = {}) {
   });
 
   // Höchste Projektrolle zuerst; alle bleiben unter der Bot-Rolle.
-  const positions = createdRoleList
-    .slice()
-    .reverse()
-    .map(({ role }, index) => ({
-      role: role.id,
-      position: Math.max(1, index + 1)
-    }));
+  const positions = buildRolePositions(createdRoleList);
   if (positions.length) {
     try {
       await guild.roles.setPositions(positions);
@@ -261,15 +260,44 @@ async function applyServerPlan(guild, plan, options = {}) {
 
   // Der auslösende Serverinhaber erhält die Owner-Rolle automatisch.
   const ownerRole = createdRoles.get("owner") || createdRoles.get("inhaber");
-  if (options.ownerId && ownerRole) {
-    try {
-      const ownerMember = await guild.members.fetch(options.ownerId);
-      await ownerMember.roles.add(ownerRole, "Discord-Server wurde vom Inhaber aufgebaut");
-    } catch (error) {
-      created.failedItems++;
-      created.errors.push("Owner-Rolle: " + String(error.message || error));
-      console.error("[SERVER-BUILD] Owner-Rolle konnte nicht vergeben werden:", error);
+  const ownerIds = [...new Set([options.ownerId, ...(options.ownerIds || [])].filter(Boolean))];
+  if (ownerRole) {
+    for (const ownerId of ownerIds) {
+      try {
+        const ownerMember = await guild.members.fetch(ownerId);
+        if (!ownerMember.roles.cache.has(ownerRole.id)) {
+          await ownerMember.roles.add(ownerRole, "Discord-Server wurde vom Inhaber aufgebaut");
+        }
+      } catch (error) {
+        created.failedItems++;
+        created.errors.push("Owner-Rolle für " + ownerId + ": " + String(error.message || error));
+        console.error("[SERVER-BUILD] Owner-Rolle konnte nicht vergeben werden:", ownerId, error);
+      }
     }
+  }
+
+  // Der Bot erhält die separate Bot-Rolle. Weitere Bot-Konten werden nur
+  // abgefragt, wenn der privilegierte Server Members Intent aktiviert wurde.
+  try {
+    const botRole = createdRoles.get("bot") || guild.roles.cache.find(role => role.name.toLowerCase() === "bot");
+    if (botRole) {
+      const botMembers = new Map();
+      const selfMember = await guild.members.fetchMe();
+      botMembers.set(selfMember.id, selfMember);
+      if (options.assignAllBots) {
+        const members = await guild.members.fetch();
+        for (const member of members.values()) if (member.user.bot) botMembers.set(member.id, member);
+      }
+      for (const member of botMembers.values()) {
+        if (!member.roles.cache.has(botRole.id)) {
+          await member.roles.add(botRole, "Bot-Konto erhält die Bot-Rolle");
+        }
+      }
+    }
+  } catch (error) {
+    created.failedItems++;
+    created.errors.push("Bot-Rolle: " + String(error.message || error));
+    console.error("[SERVER-BUILD] Bot-Rolle konnte nicht vergeben werden:", error);
   }
 
   let categoryIndex = 0;
@@ -308,7 +336,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
 
-      if (/regeln/.test(channelName) && type === ChannelType.GuildText) {
+      if (/regeln/.test(channelName) && !/team-regeln/.test(channelName) && type === ChannelType.GuildText) {
         const rulesEmbed = new EmbedBuilder()
           .setColor(0x5865F2)
           .setTitle("📜 Community-Regeln")
@@ -348,7 +376,19 @@ async function applyServerPlan(guild, plan, options = {}) {
             "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
           ].join("\n"))
           .setFooter({ text: "Minecraft Community • Teamleitung" });
+        const employmentEmbed = new EmbedBuilder()
+          .setColor(0x9b59b6)
+          .setTitle("📋 Team-Beschäftigungsformular")
+          .setDescription("Alle Teammitglieder füllen dieses Formular nach ihrer Aufnahme aus. Trage deinen Team-Bereich, deine Erfahrung und deine Verfügbarkeit ein. Die Angaben werden vertraulich an die Teamleitung übermittelt.");
+        const employmentRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("employment_open")
+            .setLabel("Beschäftigungsformular ausfüllen")
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji("📋")
+        );
         await createdChannel.send({ embeds: [teamRules] });
+        await createdChannel.send({ embeds: [employmentEmbed], components: [employmentRow] });
       }
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
@@ -496,4 +536,4 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   return overwrites;
 }
 
-module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites };
+module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions };

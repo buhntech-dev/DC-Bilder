@@ -3,7 +3,7 @@ const { PermissionFlagsBits } = require("discord.js");
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
 const { createServerPlan } = require("../src/ai");
 const { buildWebsiteHtml, escapeHtml } = require("../src/website");
-const { validateServerPlan, rolePermissions, buildChannelOverwrites } = require("../src/discord-builder");
+const { validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions } = require("../src/discord-builder");
 const { normalizeChannelName, textChannel, isReviewer, panelRow } = require("../src/applications");
 const { encodeVarInt, decodeVarInt, parseMinecraftAddress, parseStatusPacket, statusEmbed, DEFAULT_ADDRESS, buildStatusChannelOverwrites, ensureStatusChannel } = require("../src/minecraft-status");
 const { TEAM_RANKS, currentTeamRank, promotionRow, hasTeamLeadAccess, createPromotionRequest, handlePromotionInteraction } = require("../src/team-promotions");
@@ -59,6 +59,34 @@ async function test(name, fn) {
   await test("Minecraft-Preset hat eine Zusammenfassung", () => assert.ok(mc.summary.length > 20));
   await test("Minecraft-Preset besitzt Rollen", () => assert.ok(mc.roles.length > 0));
   await test("Minecraft-Preset besitzt Kategorien", () => assert.ok(mc.categories.length > 0));
+  await test("Bot-Rolle ist im Minecraft-Preset enthalten", () => assert.ok(mc.roles.some(r => r.name === "Bot")));
+  await test("Owner steht in der Rollenvorlage an erster Stelle", () => assert.equal(mc.roles[0].name, "Owner"));
+  await test("Rollenpositionen folgen deterministisch der Vorlagenreihenfolge", () => {
+    const positions = buildRolePositions([
+      { role: { id: "management" }, index: 1 },
+      { role: { id: "owner" }, index: 0 },
+      { role: { id: "member" }, index: 2 }
+    ]);
+    assert.deepEqual(positions, [
+      { role: "member", position: 1 },
+      { role: "management", position: 2 },
+      { role: "owner", position: 3 }
+    ]);
+  });
+  await test("Serveraufbau vergibt Owner-Rolle an den echten Serverinhaber", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("ownerId: interaction.guild.ownerId"));
+  });
+  await test("Team-Regeln erhalten ein Beschäftigungsformular-Panel", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
+    assert.ok(source.includes('setCustomId("employment_open")'));
+    assert.ok(source.includes("Team-Beschäftigungsformular"));
+  });
+  await test("Beschäftigungsformular öffnet ein Modal und sendet es intern", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/applications.js"), "utf8");
+    assert.ok(source.includes('setCustomId("employment_submit")'));
+    assert.ok(source.includes('textChannel(interaction.guild, ["bewerbungen-team", "team-protokolle"])'));
+  });
   await test("Minecraft-Preset enthält Owner", () => assert.ok(mc.roles.some(r => r.name === "Owner")));
   await test("Minecraft-Preset enthält Management", () => assert.ok(mc.roles.some(r => r.name === "Management")));
   await test("Minecraft-Preset enthält Test Support", () => assert.ok(mc.roles.some(r => r.name === "Test Support")));

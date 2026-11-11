@@ -144,12 +144,39 @@ async function openTicket(interaction) {
 client.once("clientReady", async () => {
   console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
   for (const guild of client.guilds.cache.values()) {
+    try {
+      const botRole = guild.roles.cache.find(role => role.name.toLowerCase() === "bot");
+      if (botRole) {
+        const selfMember = await guild.members.fetchMe();
+        if (!selfMember.roles.cache.has(botRole.id)) await selfMember.roles.add(botRole, "Bot-Konto erhält die Bot-Rolle");
+        if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
+          const members = await guild.members.fetch();
+          for (const member of members.values()) {
+            if (member.user.bot && !member.roles.cache.has(botRole.id)) {
+              await member.roles.add(botRole, "Bot-Konto erhält die Bot-Rolle");
+            }
+          }
+        }
+      }
+    } catch (error) { console.warn(`Bot-Rolle konnte auf ${guild.name} nicht vollständig vergeben werden:`, error.message); }
     try { await joinSupportVoice(client, guild); }
     catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
   }
   startMinecraftStatusUpdates(client);
   startWeeklyBackups(client);
 });
+
+if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
+  client.on("guildMemberAdd", async member => {
+    if (!member.user.bot) return;
+    const role = member.guild.roles.cache.find(item => item.name.toLowerCase() === "bot");
+    if (role && !member.roles.cache.has(role.id)) {
+      await member.roles.add(role, "Neuer Bot erhält die Bot-Rolle").catch(error =>
+        console.warn("Bot-Rolle für neuen Bot konnte nicht vergeben werden:", error.message)
+      );
+    }
+  });
+}
 
 client.on("interactionCreate", async interaction => {
   try {
@@ -591,7 +618,9 @@ client.on("interactionCreate", async interaction => {
       }
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
-        ownerId: interaction.user.id,
+        ownerId: interaction.guild.ownerId,
+        ownerIds: [process.env.OWNER_ID],
+        assignAllBots: String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true",
         // Den ursprünglichen Befehlskanal immer behalten: Discord-Interaktions-Webhooks
         // sind an diesen Kanal gebunden und schlagen sonst mit Unknown Channel (10003) fehl.
         keepChannelId: interaction.channelId,
