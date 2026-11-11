@@ -512,10 +512,13 @@ client.on("interactionCreate", async interaction => {
     }
     if (interaction.commandName === "website") {
       try {
-        const html = buildWebsiteHtml(interaction.guild.name);
-        const file = new AttachmentBuilder(Buffer.from(html, "utf8"), { name: "minecraft-website.html" });
-        await interaction.channel.send({ content: "🌐 **Deine Website ist fertig.** Die HTML-Datei kannst du herunterladen und bei einem Webhoster veröffentlichen.", files: [file] });
-        return interaction.editReply("✅ Website wurde als HTML-Datei erstellt und im aktuellen Kanal veröffentlicht.");
+        const type = interaction.options.getString("bereich", true);
+        const html = buildWebsiteHtml(interaction.guild.name, { type });
+        const fileName = type === "feuerwehr" ? "feuerwehr-website.html" : "minecraft-website.html";
+        const label = type === "feuerwehr" ? "Feuerwehr-Website" : "Minecraft-Website";
+        const file = new AttachmentBuilder(Buffer.from(html, "utf8"), { name: fileName });
+        await interaction.channel.send({ content: "🌐 **Deine " + label + " ist fertig.** Die moderne, responsive HTML-Datei kannst du herunterladen und bei einem Webhoster veröffentlichen.", files: [file] });
+        return interaction.editReply("✅ " + label + " wurde erstellt und im aktuellen Kanal veröffentlicht.");
       } catch (error) {
         console.error("Website-Erstellung fehlgeschlagen:", error);
         return interaction.editReply("Website konnte nicht erstellt werden: " + String(error.message || error).slice(0, 500));
