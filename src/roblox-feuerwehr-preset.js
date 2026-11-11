@@ -125,7 +125,7 @@ function createRobloxFeuerwehrPreset() {
   ];
 
   return {
-    serverName: "Roblox Feuerwehr RP",
+    serverName: "Schritz – Roblox Feuerwehr RP",
     summary: "Kompletter Discord-Aufbau für eine Roblox-Feuerwehr-RP-Community mit Projektinhaber, Wehrleitung, Abteilungen, fünf Funkgruppen, Leitstelle, Einsatzbetrieb, Fuhrpark, Support, Teamverwaltung und Protokollen.",
     roles,
     categories
