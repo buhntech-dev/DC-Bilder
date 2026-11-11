@@ -223,10 +223,10 @@ function createProfiMinePreset() {
       ch("🎙️・event-warteraum", "Warteraum für Event-Teilnehmer", [], "voice"),
       ch("🎤・event-buehne", "Sprachraum für Moderation und Eventleitung", ["Event-Team", "Event-Leitung", "Management"], "voice")
     ]),
-    cat("💎 PREMIUM & BELohnUNGEN", [
+    cat("💎 PREMIUM & BELOHNUNGEN", [
       ch("💎・premium-information", "Premium-Ränge, Vorteile und Bedingungen"),
       ch("🎁・premium-belohnungen", "Informationen zu freigeschalteten Belohnungen"),
-      ch("⭐・premium-lounge", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
+      ch("💬・premium-chat", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
       ch("👑・legend-lounge", "Bereich für Legend und Netzwerkleitung", ["Legend", "Netzwerkleitung", "Owner"]),
       ch("🎟️・giveaways", "Offizielle Gewinnspiele und Teilnahmebedingungen"),
       ch("🏅・erfolge-und-abzeichen", "Community-Erfolge und besondere Auszeichnungen")
