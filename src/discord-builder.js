@@ -107,6 +107,23 @@ async function applyServerPlan(guild, plan, options = {}) {
     else options.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
   const createdRoles = new Map();
+  // Discords API-Limits sind serverseitig und nicht abschaltbar. Wir verteilen
+  // Änderungen deshalb gleichmäßig, damit Discord keine großen 429-Warteschlangen
+  // aufbauen muss. Das ist kein Nutzungs-/Erstellungslimit: Builds laufen weiter,
+  // bis alle geplanten Elemente verarbeitet wurden.
+  let lastRoleMutationAt = 0;
+  let lastChannelMutationAt = 0;
+  const waitForMutationSlot = async (kind, intervalMs) => {
+    throwIfBuildAborted(buildSignal);
+    const lastAt = kind === "role" ? lastRoleMutationAt : lastChannelMutationAt;
+    const remaining = intervalMs - (Date.now() - lastAt);
+    if (lastAt && remaining > 0) {
+      await new Promise(resolve => setTimeout(resolve, remaining));
+    }
+    throwIfBuildAborted(buildSignal);
+    if (kind === "role") lastRoleMutationAt = Date.now();
+    else lastChannelMutationAt = Date.now();
+  };
   const created = {
     roles: 0, categories: 0, channels: 0,
     deletedChannels: 0, deletedRoles: 0, skippedRoles: 0, failedDeletes: 0,
@@ -165,6 +182,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       if (keepCommandNames.has(channel.name.toLowerCase()) || (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
+        await waitForMutationSlot("channel", options.channelMutationIntervalMs ?? 250);
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedChannels++;
       } catch (error) {
@@ -188,6 +206,8 @@ async function applyServerPlan(guild, plan, options = {}) {
     for (const role of rolesToDelete) {
       throwIfBuildAborted(buildSignal);
       try {
+        // Maximal rund vier Rollenänderungen je fünf Sekunden statt Burst-Löschungen.
+        await waitForMutationSlot("role", options.roleMutationIntervalMs ?? 1100);
         await role.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedRoles++;
       } catch (error) {
@@ -218,6 +238,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const permissions = rolePermissions(name);
       await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
       console.log("[SERVER-BUILD] Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ":", name);
+      await waitForMutationSlot("role", 1100);
       // Erst die Rolle sicher anlegen, danach Berechtigungen separat setzen.
       // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
       const createdRole = await guild.roles.create({
@@ -309,6 +330,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
     try {
+      await waitForMutationSlot("channel", 250);
       parent = await guild.channels.create({
         name: cleanName(category.name, "Kategorie"),
         type: ChannelType.GuildCategory,
@@ -322,7 +344,8 @@ async function applyServerPlan(guild, plan, options = {}) {
       continue;
     }
 
-    await mapWithConcurrency(category.channels, 3, async (channel, channelIndex) => {
+    // Eine gleichmäßige Schreibwarteschlange verhindert Kanal-Erstellungs-Bursts.
+    await mapWithConcurrency(category.channels, 1, async (channel, channelIndex) => {
       throwIfBuildAborted(buildSignal);
       const displayChannelIndex = channelIndex + 1;
       const channelName = cleanName(channel.name, "neuer-kanal").toLowerCase();
@@ -335,6 +358,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
+      await waitForMutationSlot("channel", 250);
       const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
 
