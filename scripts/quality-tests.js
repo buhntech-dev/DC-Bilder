@@ -153,6 +153,32 @@ async function test(name, fn) {
   await test("ProfiMine enthält Event-Team-Rolle", () => assert.ok(pro.roles.some(r => r.name === "Event-Team")));
   await test("ProfiMine enthält Creator-Rolle", () => assert.ok(pro.roles.some(r => r.name === "Creator")));
   await test("ProfiMine enthält Partner-Rolle", () => assert.ok(pro.roles.some(r => r.name === "Partner")));
+  await test("ProfiMine Ultimate besitzt ein erweitertes Netzwerk-Layout", () => {
+    assert.ok(pro.categories.length >= 20);
+    assert.ok(pro.categories.some(c => c.name.includes("SKYBLOCK")));
+    assert.ok(pro.categories.some(c => c.name.includes("CLANS")));
+    assert.ok(pro.categories.some(c => c.name.includes("CREATOR")));
+    assert.ok(pro.categories.some(c => c.name.includes("SICHERHEIT")));
+  });
+  await test("ProfiMine-Rollen und Kanäle haben keine doppelten Namen", () => {
+    const roleNames = pro.roles.map(r => r.name.toLowerCase());
+    const channelNames = pro.categories.flatMap(c => c.channels).map(ch => ch.name.toLowerCase());
+    assert.equal(new Set(roleNames).size, roleNames.length);
+    assert.equal(new Set(channelNames).size, channelNames.length);
+  });
+  await test("ProfiMine bleibt innerhalb der Discord-Rollen- und Kanallimits", () => {
+    const channelCount = pro.categories.length + pro.categories.reduce((n, c) => n + c.channels.length, 0);
+    assert.ok(pro.roles.length <= 250);
+    assert.ok(channelCount <= 500);
+    assert.ok(pro.categories.every(c => c.channels.length <= 50));
+  });
+  await test("Alle privaten ProfiMine-Kanäle verweisen auf vorhandene Rollen", () => {
+    const roles = new Set(pro.roles.map(r => r.name.toLowerCase()));
+    const missing = pro.categories.flatMap(c => c.channels)
+      .flatMap(ch => ch.privateToRoles || [])
+      .filter(name => !roles.has(name.toLowerCase()));
+    assert.deepEqual([...new Set(missing)], []);
+  });
   await test("ProfiMine enthält Builder+-Rolle", () => assert.ok(pro.roles.some(r => r.name === "Builder+")));
   await test("ProfiMine enthält Wirtschaftskategorie", () => assert.ok(pro.categories.some(c => c.name.includes("WIRTSCHAFT"))));
   await test("ProfiMine enthält Clan- und Eventkategorie", () => assert.ok(pro.categories.some(c => c.name.includes("CLANS"))));
