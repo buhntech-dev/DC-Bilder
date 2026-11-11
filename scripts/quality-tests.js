@@ -666,6 +666,21 @@ async function test(name, fn) {
     assert.ok(source.includes('await hasPermission(interaction, needed, interaction.commandName)'));
   });
 
+
+  await test("Team-Regelpanel kann alte Beschäftigungsformulare entfernen", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    const commands = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    assert.ok(commands.includes('setName("teamregeln-panel")'));
+    assert.ok(source.includes('message.embeds.some(embed => embed.title === "📋 Team-Beschäftigungsformular")'));
+    assert.ok(source.includes('component.customId === "employment_open"'));
+    assert.ok(source.includes('setCustomId("team_rules_confirm")'));
+  });
+  await test("Alte Ticket-Schaltfläche bleibt kompatibel", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes('interaction.customId === "ticket_open"'));
+    assert.ok(source.includes('openTicket(interaction, "support")'));
+  });
+
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
