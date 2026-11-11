@@ -14,6 +14,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName("minecraft")
     .setDescription("Erstellt den vorgefertigten Minecraft-Discord-Server"),
+  new SlashCommandBuilder().setName("robloxfeuerwehr").setDescription("Erstellt einen vollständigen Roblox-Feuerwehr-Discord mit Leitstelle, Funk, Fahrzeugen und Personal"),
   new SlashCommandBuilder()
     .setName("profimine")
     .setDescription("Erstellt ProfiMine Ultimate mit erweitertem Minecraft-Discord"),
