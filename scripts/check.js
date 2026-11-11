@@ -99,7 +99,11 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
 
   const plan = presetFactory();
   const expectedChannels = plan.categories.reduce((sum, category) => sum + category.channels.length, 0);
-  const result = await applyServerPlan(guild, plan, { replaceServer: true, ownerId: "mock-owner" });
+  const result = await applyServerPlan(guild, plan, {
+    replaceServer: true, ownerId: "mock-owner",
+    // Mock-Tests prüfen die Ablauflogik ohne echte API-Wartezeiten.
+    roleMutationIntervalMs: 0, channelMutationIntervalMs: 0
+  });
   if (result.roles !== plan.roles.length) throw new Error(presetName + ": Rollen unvollständig " + result.roles + "/" + plan.roles.length);
   if (result.categories !== plan.categories.length) throw new Error(presetName + ": Kategorien unvollständig " + result.categories + "/" + plan.categories.length);
   if (result.channels !== expectedChannels) throw new Error(presetName + ": Kanäle unvollständig " + result.channels + "/" + expectedChannels);
