@@ -69,48 +69,6 @@ async function handleApplicationInteraction(interaction) {
     return true;
   }
 
-  if (interaction.isButton() && interaction.customId === "employment_open") {
-    const modal = new ModalBuilder().setCustomId("employment_submit").setTitle("Team-Beschäftigungsformular");
-    const fields = [
-      ["team_area", "Team-Bereich / Position", TextInputStyle.Short, "z. B. Support, Moderation, Builder", 100],
-      ["minecraft_name", "Minecraft-Name", TextInputStyle.Short, "Dein Minecraft-Name", 16],
-      ["experience", "Bisherige Aufgaben / Erfahrung", TextInputStyle.Paragraph, "Welche Aufgaben übernimmst du?", 700],
-      ["availability", "Verfügbarkeit", TextInputStyle.Paragraph, "An welchen Tagen und Uhrzeiten bist du erreichbar?", 500],
-      ["weekly_hours", "Geplante Aktivität pro Woche", TextInputStyle.Short, "z. B. 5–8 Stunden", 80]
-    ];
-    modal.addComponents(...fields.map(([id, label, style, placeholder, max]) =>
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId(id).setLabel(label).setStyle(style)
-          .setPlaceholder(placeholder).setRequired(true).setMaxLength(max)
-      )
-    ));
-    await interaction.showModal(modal);
-    return true;
-  }
-
-  if (interaction.isModalSubmit() && interaction.customId === "employment_submit") {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    await interaction.guild.channels.fetch();
-    const review = textChannel(interaction.guild, ["bewerbungen-team", "team-protokolle"]);
-    if (!review) {
-      await interaction.editReply("Der interne Teamkanal für Beschäftigungsformulare fehlt. Bitte prüfe #bewerbungen-team oder #team-protokolle.");
-      return true;
-    }
-    const embed = new EmbedBuilder().setColor(0x9b59b6).setTitle("📋 Neues Team-Beschäftigungsformular")
-      .setDescription("Eingereicht von " + interaction.user.toString())
-      .addFields(
-        { name: "Team-Bereich / Position", value: interaction.fields.getTextInputValue("team_area").slice(0, 1024), inline: true },
-        { name: "Minecraft-Name", value: interaction.fields.getTextInputValue("minecraft_name").slice(0, 1024), inline: true },
-        { name: "Bisherige Aufgaben / Erfahrung", value: interaction.fields.getTextInputValue("experience").slice(0, 1024) },
-        { name: "Verfügbarkeit", value: interaction.fields.getTextInputValue("availability").slice(0, 1024) },
-        { name: "Geplante Aktivität pro Woche", value: interaction.fields.getTextInputValue("weekly_hours").slice(0, 1024) },
-        { name: "Discord", value: interaction.user.tag + " (" + interaction.user.id + ")" }
-      ).setTimestamp();
-    await review.send({ embeds: [embed] });
-    await interaction.editReply("✅ Dein Beschäftigungsformular wurde vertraulich an die Teamleitung gesendet.");
-    return true;
-  }
-
   if (interaction.isModalSubmit() && interaction.customId === "application_submit") {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const minecraftName = interaction.fields.getTextInputValue("minecraft_name").trim();

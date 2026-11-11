@@ -376,19 +376,14 @@ async function applyServerPlan(guild, plan, options = {}) {
             "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
           ].join("\n"))
           .setFooter({ text: "Minecraft Community • Teamleitung" });
-        const employmentEmbed = new EmbedBuilder()
-          .setColor(0x9b59b6)
-          .setTitle("📋 Team-Beschäftigungsformular")
-          .setDescription("Alle Teammitglieder füllen dieses Formular nach ihrer Aufnahme aus. Trage deinen Team-Bereich, deine Erfahrung und deine Verfügbarkeit ein. Die Angaben werden vertraulich an die Teamleitung übermittelt.");
-        const employmentRow = new ActionRowBuilder().addComponents(
+        const confirmRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId("employment_open")
-            .setLabel("Beschäftigungsformular ausfüllen")
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji("📋")
+            .setCustomId("team_rules_confirm")
+            .setLabel("Team-Regeln bestätigen")
+            .setStyle(ButtonStyle.Success)
+            .setEmoji("✅")
         );
-        await createdChannel.send({ embeds: [teamRules] });
-        await createdChannel.send({ embeds: [employmentEmbed], components: [employmentRow] });
+        await createdChannel.send({ embeds: [teamRules], components: [confirmRow] });
       }
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
