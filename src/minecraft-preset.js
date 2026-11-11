@@ -129,47 +129,165 @@ function createMinecraftPreset() {
 function createProfiMinePreset() {
   const base = createMinecraftPreset();
   base.serverName = "ProfiMine Ultimate";
-  base.summary = "ProfiMine Ultimate: erweiterter Minecraft-Community-Discord mit Rängen, Wirtschaft, Clans, Events, Creator-Hub, Bewerbungen und Teamverwaltung.";
+  base.summary = "ProfiMine Ultimate – ein vollständiger Premium-Netzwerk-Discord mit professionellem Onboarding, mehreren Spielmodi, Wirtschaft, Clans, Gilden, Events, Creator-Programm, Rang- und Belohnungssystem, Support, Bewerbungen, Moderation, Teamleitung und geschützten internen Bereichen. Alle Bereiche sind nach Rollen strukturiert; der Serverinhaber erhält Zugriff auf alle Kanäle.";
+
+  // Netzwerk- und Community-Rollen. Bestehende Teamrollen aus dem Grundlayout
+  // bleiben erhalten; neue Rollen ergänzen Spielmodi, Community und Events.
   base.roles.push(
-    { name: "Premium", color: "#F1C40F", hoist: true, mentionable: false },
-    { name: "MVP", color: "#3498DB", hoist: true, mentionable: false },
-    { name: "Elite", color: "#9B59B6", hoist: true, mentionable: false },
-    { name: "Legend", color: "#E74C3C", hoist: true, mentionable: false },
-    { name: "Event-Team", color: "#1ABC9C", hoist: true, mentionable: false },
-    { name: "Creator", color: "#E91E63", hoist: true, mentionable: false },
-    { name: "Partner", color: "#16A085", hoist: true, mentionable: false },
-    { name: "Builder+", color: "#D35400", hoist: true, mentionable: false }
+    { name: "Netzwerkleitung", color: "#7D3C98", hoist: true, mentionable: false },
+    { name: "Community Manager", color: "#AF7AC5", hoist: true, mentionable: false },
+    { name: "Developer+", color: "#273746", hoist: true, mentionable: false },
+    { name: "Moderator in Ausbildung", color: "#5DADE2", hoist: true, mentionable: false },
+    { name: "Support in Ausbildung", color: "#48C9B0", hoist: true, mentionable: false },
+    { name: "Event-Leitung", color: "#17A589", hoist: true, mentionable: false },
+    { name: "Media-Team", color: "#D98880", hoist: true, mentionable: false },
+    { name: "Partner+", color: "#138D75", hoist: true, mentionable: false },
+    { name: "YouTube", color: "#E74C3C", hoist: true, mentionable: false },
+    { name: "Twitch", color: "#8E44AD", hoist: true, mentionable: false },
+    { name: "TikTok", color: "#34495E", hoist: true, mentionable: false },
+    { name: "Sponsor", color: "#B7950B", hoist: true, mentionable: false },
+    { name: "Nitro Booster", color: "#C27C0E", hoist: true, mentionable: false },
+    { name: "Spieler", color: "#27AE60", hoist: false, mentionable: false },
+    { name: "Event-Gewinner", color: "#F4D03F", hoist: false, mentionable: false },
+    { name: "Muted", color: "#566573", hoist: false, mentionable: false }
   );
+
+  // Doppelte Team-Bewerbungsräume vermeiden und den vorhandenen Raum eindeutig benennen.
+  const teamManagement = base.categories.find(category => category.name === "🛡️ TEAMVERWALTUNG");
+  if (teamManagement) {
+    const applicationChannel = teamManagement.channels.find(channel => channel.name === "📨・bewerbungen");
+    if (applicationChannel) applicationChannel.name = "📨・team-bewerbungen";
+  }
+
   base.categories.push(
-    cat("💎 RÄNGE & FORTSCHRITT", [
-      ch("🏆・rang-übersicht", "Alle Minecraft-Ränge und Vorteile"),
-      ch("🎁・rang-belohnungen", "Belohnungen und Rang-Upgrades"),
-      ch("⭐・premium-lounge", "Austausch für Premium-Spieler", ["Premium", "MVP", "Elite", "Legend"])
+    cat("🌐 PRO FIMINE NETWORK", [
+      ch("🌐・netzwerk-start", "Willkommen im ProfiMine-Netzwerk – zentrale Informationen und Einstieg"),
+      ch("📋・netzwerk-konzept", "Vorstellung des Netzwerks, seiner Ziele und Spielmodi"),
+      ch("🧭・spielmodus-auswahl", "Übersicht und Auswahl der verfügbaren Spielmodi"),
+      ch("📡・netzwerk-status", "Netzwerkweite Statusmeldungen und Wartungsinformationen"),
+      ch("🗳️・netzwerk-umfragen", "Abstimmungen und Community-Entscheidungen"),
+      ch("📌・wichtige-links", "Website, Shop, Wiki, Karte und weitere offizielle Links")
     ]),
-    cat("💰 WIRTSCHAFT & MARKT", [
-      ch("💰・wirtschaft", "Wirtschaft, Geld und Handel"),
-      ch("🛒・markt", "Spielerangebote und Gesuche"),
-      ch("🔨・jobs", "Jobs und Aufgaben"),
-      ch("🏦・auktionen", "Auktionen und Versteigerungen")
+    cat("🏡 SURVIVAL & SMP", [
+      ch("🌲・survival-chat", "Allgemeiner Chat für Survival und SMP"),
+      ch("🏠・base-vorstellungen", "Zeige deine Base und deine Bauprojekte"),
+      ch("🧭・abenteuer-und-tipps", "Tipps, Fortschritt und gemeinsame Abenteuer"),
+      ch("⛏️・minen-und-farmen", "Mining, Farmen und Ressourcen"),
+      ch("🛒・spieler-markt", "Kaufe und verkaufe Items nach den Handelsregeln"),
+      ch("📦・item-suche", "Suche bestimmte Items und Ressourcen"),
+      ch("🤝・handelspartner", "Finde zuverlässige Handelspartner"),
+      ch("🏘️・staedte-und-dörfer", "Städte, Dörfer und gemeinsame Baugebiete"),
+      ch("🧱・bauwerke", "Große Bauprojekte und Community-Bauten"),
+      ch("⚔️・pvp-arena", "PvP, Duelle und Arena-Absprachen"),
+      ch("🧰・redstone-und-farmen", "Redstone-Schaltungen und automatische Farmen")
     ]),
-    cat("⚔️ CLANS & EVENTS", [
-      ch("🛡️・clans", "Clans und Teams"),
-      ch("📣・clan-rekrutierung", "Mitglieder für Clans suchen"),
-      ch("🎉・event-anmeldungen", "Anmeldungen für Community-Events"),
-      ch("🏅・turniere", "Turniere und Wettbewerbe"),
-      ch("🎙️・event-besprechung", "Interner Event-Team-Bereich", ["Event-Team", "Management", "Administrator"], "voice")
+    cat("☁️ SKYBLOCK", [
+      ch("☁️・skyblock-chat", "Austausch rund um SkyBlock"),
+      ch("🏝️・insel-vorstellung", "Zeige deine Insel und deinen Fortschritt"),
+      ch("📈・insel-upgrades", "Insel-Ausbau, Upgrades und Strategien"),
+      ch("💱・skyblock-handel", "SkyBlock-Items und Handelsangebote"),
+      ch("🏆・insel-topliste", "Wettbewerbe und Insel-Ranglisten")
     ]),
-    cat("🎥 CREATOR & PARTNER", [
-      ch("🎬・creator-hub", "Videos, Streams und Creator-News"),
-      ch("🤝・partner", "Offizielle Partner und Kooperationen"),
-      ch("📸・creator-media", "Creator-Medien und Veröffentlichungen")
+    cat("🎮 MINIGAMES & ARCADES", [
+      ch("🎮・minigames-chat", "Alles rund um Minigames"),
+      ch("🛏️・bedwars", "Teams, Taktiken und Mitspielersuche für BedWars"),
+      ch("🏹・skywars", "SkyWars-Taktiken und Gruppen"),
+      ch("🧨・tntrun-und-party", "Partyspiele und kurze Matches"),
+      ch("🏁・parkour", "Parkour-Strecken, Rekorde und Tipps"),
+      ch("🎯・duelle", "Verabrede faire Duelle"),
+      ch("👥・team-suche", "Finde Mitspieler für deinen nächsten Match")
     ]),
-    cat("🛠️ DOWNLOADS & WIKI", [
-      ch("🌐・website", "Offizielle Website und wichtige Links"),
-      ch("📥・downloads", "Downloads und Ressourcen"),
-      ch("📚・wiki", "Anleitungen und Server-Wissen")
+    cat("💰 WIRTSCHAFT & HANDEL", [
+      ch("💰・wirtschaft-news", "Ankündigungen zu Wirtschaft, Preisen und Änderungen"),
+      ch("📊・marktpreise", "Gemeinschaftliche Marktpreis-Übersicht"),
+      ch("🛍️・shops-und-staende", "Vorstellung von Spieler-Shops"),
+      ch("🔨・jobs-und-auftraege", "Biete oder suche Bau-, Farm- und Sammelaufträge"),
+      ch("🏦・auktionen", "Auktionen mit klaren Start- und Endzeiten"),
+      ch("📜・handelsregeln", "Verbindliche Regeln für sichere und faire Trades")
+    ]),
+    cat("🛡️ CLANS & GILDEN", [
+      ch("🛡️・clan-vorstellung", "Stelle deinen Clan oder deine Gilde vor"),
+      ch("📨・clan-rekrutierung", "Suche Mitglieder oder bewirb dich bei einem Clan"),
+      ch("🤝・clan-allianzen", "Allianzen und gemeinsame Projekte"),
+      ch("⚔️・clan-kriege", "Clan-Wettkämpfe und organisierte Herausforderungen"),
+      ch("🏰・clan-basen", "Zeige eure gemeinsamen Basen"),
+      ch("📋・clan-verwaltung", "Interner Clan-Leitungsbereich", ["Owner", "Management", "Event-Team"])
+    ]),
+    cat("🎉 EVENTS & TURNIERE", [
+      ch("📢・event-ankündigungen", "Offizielle Event-Termine und Teilnahmebedingungen"),
+      ch("📝・event-anmeldung", "Melde dich für kommende Events an"),
+      ch("📅・event-kalender", "Übersicht geplanter Community-Events"),
+      ch("🏆・event-ergebnisse", "Ergebnisse, Gewinner und Ranglisten"),
+      ch("💡・event-ideen", "Schlage neue Events und Wettbewerbe vor"),
+      ch("🧑‍⚖️・event-team-chat", "Interner Event-Team-Chat", ["Event-Team", "Event-Leitung", "Management"]),
+      ch("🎙️・event-warteraum", "Warteraum für Event-Teilnehmer", [], "voice"),
+      ch("🎤・event-buehne", "Sprachraum für Moderation und Eventleitung", ["Event-Team", "Event-Leitung", "Management"], "voice")
+    ]),
+    cat("💎 PREMIUM & BELOHNUNGEN", [
+      ch("💎・premium-information", "Premium-Ränge, Vorteile und Bedingungen"),
+      ch("🎁・premium-belohnungen", "Informationen zu freigeschalteten Belohnungen"),
+      ch("💬・premium-chat", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
+      ch("👑・legend-lounge", "Bereich für Legend und Netzwerkleitung", ["Legend", "Netzwerkleitung", "Owner"]),
+      ch("🎟️・giveaways", "Offizielle Gewinnspiele und Teilnahmebedingungen"),
+      ch("🏅・erfolge-und-abzeichen", "Community-Erfolge und besondere Auszeichnungen")
+    ]),
+    cat("🎥 CREATOR STUDIO", [
+      ch("🎬・creator-news", "Ankündigungen für Creator und Medienpartner"),
+      ch("📺・youtube-upload", "Neue YouTube-Videos teilen"),
+      ch("🟣・twitch-live", "Livestream-Ankündigungen"),
+      ch("📱・tiktok-clips", "Kurze Clips und Highlights"),
+      ch("📸・medien-galerie", "Screenshots, Thumbnails und Community-Medien"),
+      ch("📝・creator-bewerbung", "Bewerbung für das Creator-Programm"),
+      ch("🔒・creator-intern", "Interner Creator- und Media-Team-Bereich", ["Creator", "Content Creator", "Media-Team", "Management"])
+    ]),
+    cat("🧠 WIKI & HILFE", [
+      ch("📚・wiki-start", "Zentrale Anleitungen und Wissenssammlung"),
+      ch("🆕・neuigkeiten-fuer-neue", "Erste Schritte für neue Spieler"),
+      ch("❓・faq", "Antworten auf häufig gestellte Fragen"),
+      ch("🧪・crafting-und-rezepte", "Rezepte, Crafting und nützliche Kombinationen"),
+      ch("🧭・befehle-und-features", "Übersicht der erlaubten Serverbefehle und Funktionen"),
+      ch("🐞・bekannte-fehler", "Bekannte Probleme und aktuelle Workarounds"),
+      ch("💡・vorschlaege", "Ideen für neue Funktionen und Verbesserungen")
+    ]),
+    cat("🎫 SUPPORT CENTER", [
+      ch("🎫・support-panel", "Support-Informationen und Einstieg zu Tickets"),
+      ch("🧾・kaufhilfe", "Fragen zu Shop, Käufen und Zahlungsbelegen"),
+      ch("🚨・spielerbeschwerde", "Melde Regelverstöße mit Belegen und sachlicher Beschreibung"),
+      ch("🔐・account-hilfe", "Hilfe bei Account- und Verbindungsproblemen"),
+      ch("📥・ticket-archiv", "Internes Archiv für abgeschlossene Supportfälle", ["Supporter", "Senior Supporter", "Moderator", "Senior Moderator", "Administrator", "Management"])
+    ]),
+    cat("🧑‍💻 TEAM AKADEMIE", [
+      ch("📘・team-handbuch", "Aufgaben, Zuständigkeiten und Arbeitsabläufe", ["Owner", "Management", "Teamleitung", "Administrator", "Senior Administrator", "Moderator", "Senior Moderator", "Supporter", "Senior Supporter"]),
+      ch("🎓・team-schulung", "Schulungen und Einarbeitung neuer Teammitglieder", ["Management", "Teamleitung", "Administrator", "Senior Administrator", "Moderator", "Senior Moderator", "Supporter", "Senior Supporter", "Moderator in Ausbildung", "Support in Ausbildung"]),
+      ch("🧪・probezeit", "Begleitung und Feedback während der Probezeit", ["Management", "Teamleitung", "Moderator in Ausbildung", "Support in Ausbildung"]),
+      ch("📊・team-leistung", "Interne Qualitäts- und Aktivitätsauswertung", ["Owner", "Management", "Teamleitung"]),
+      ch("🗓️・team-termine", "Teamtermine und Besprechungen", ["Owner", "Management", "Teamleitung", "Administrator"]),
+      ch("🎙️・team-besprechung", "Interner Sprachraum für Teamgespräche", ["Owner", "Management", "Teamleitung", "Administrator", "Moderator", "Supporter"], "voice")
+    ]),
+    cat("🛠️ TECHNIK & ENTWICKLUNG", [
+      ch("💻・dev-chat", "Technische Absprachen und Entwicklung", ["Developer", "Developer+", "Management", "Owner"]),
+      ch("🧪・test-server", "Tests, Releases und technische Prüfungen", ["Developer", "Developer+", "Management", "Owner", "Builder"]),
+      ch("📦・release-notes", "Dokumentation neuer Versionen und Änderungen", ["Developer", "Developer+", "Management", "Owner"]),
+      ch("🚨・technik-incidents", "Interne technische Störungen und Maßnahmen", ["Developer", "Developer+", "Management", "Owner", "Administrator"]),
+      ch("🔊・dev-besprechung", "Sprachraum für technische Besprechungen", ["Developer", "Developer+", "Management", "Owner"], "voice")
+    ]),
+    cat("📈 MANAGEMENT & CONTROLLING", [
+      ch("👑・management-office", "Vertraulicher Bereich der Netzwerkleitung", ["Owner", "Management", "Netzwerkleitung"]),
+      ch("📋・entscheidungen", "Dokumentation wichtiger Entscheidungen", ["Owner", "Management", "Netzwerkleitung"]),
+      ch("📊・projekt-roadmap", "Ziele, Meilensteine und Projektplanung", ["Owner", "Management", "Netzwerkleitung", "Community Manager"]),
+      ch("🤝・partner-management", "Interne Partner- und Kooperationsverwaltung", ["Owner", "Management", "Netzwerkleitung"]),
+      ch("💼・sponsoring", "Vertrauliche Sponsoring-Absprachen", ["Owner", "Management", "Netzwerkleitung"]),
+      ch("🧾・management-protokolle", "Interne Sitzungsprotokolle", ["Owner", "Management", "Netzwerkleitung"])
+    ]),
+    cat("🔐 SICHERHEIT & AUDIT", [
+      ch("📜・moderations-log", "Interne Moderationsdokumentation", ["Owner", "Management", "Administrator", "Senior Administrator", "Moderator", "Senior Moderator"]),
+      ch("🛡️・sicherheitsmeldungen", "Sicherheitsvorfälle und verdächtige Aktivitäten", ["Owner", "Management", "Administrator", "Senior Administrator"]),
+      ch("📥・bot-aktionen", "Protokoll automatisierter Bot-Aktionen", ["Owner", "Management", "Administrator", "Senior Administrator"]),
+      ch("🗃️・backup-status", "Hinweise zu Backups und Wiederherstellung", ["Owner", "Management", "Administrator"]),
+      ch("⚙️・bot-konfiguration", "Interne Bot- und Serverkonfiguration", ["Owner", "Management"])
     ])
   );
+
   return base;
 }
 
