@@ -13,7 +13,8 @@ for (const file of files) {
 if (failed) process.exit(1);
 
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
-for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()]]) {
+const { createRobloxFeuerwehrPreset } = require("../src/roblox-feuerwehr-preset");
+for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()], ["RobloxFeuerwehr", createRobloxFeuerwehrPreset()]]) {
   if (!Array.isArray(preset.roles) || !Array.isArray(preset.categories)) throw new Error(name + ": Rollen/Kategorien fehlen.");
   const roleNames = preset.roles.map(role => String(role.name).toLowerCase());
   if (new Set(roleNames).size !== roleNames.length) throw new Error(name + ": doppelte Rollennamen.");
@@ -22,6 +23,16 @@ for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMin
   if (preset.roles.length > 250 || preset.categories.length + channels.length > 500) throw new Error(name + ": Discord-Limit überschritten.");
   if (!preset.roles.some(role => role.name === "Owner")) throw new Error(name + ": Owner-Rolle fehlt.");
   if (name === "Minecraft" && !preset.roles.some(role => role.name === "Test Support")) throw new Error("Minecraft: Test Support-Rolle fehlt.");
+  if (name === "RobloxFeuerwehr") {
+    const names = preset.roles.map(role => role.name);
+    const channels = preset.categories.flatMap(category => category.channels);
+    for (const required of ["Projektinhaber", "Stellv. Projektinhaber", "Wehrleitung", "Zugführer", "Gruppenführer", "Leitstellenleitung", "Disponent", "Feuerwehr", "Fahrzeugführer"]) {
+      if (!names.includes(required)) throw new Error("RobloxFeuerwehr: Rolle fehlt: " + required);
+    }
+    for (const required of ["funk-gruppe-1", "funk-gruppe-2", "funk-gruppe-3", "funk-gruppe-4", "funk-gruppe-5", "fahrzeugübersicht", "leitstellen-dashboard", "einsatzberichte"]) {
+      if (!channels.some(channel => channel.name.includes(required))) throw new Error("RobloxFeuerwehr: Kanal fehlt: " + required);
+    }
+  }
   if (name === "Minecraft" && !preset.categories.some(category => category.channels.some(channel => channel.name.includes("whitelist-bearbeitung")))) throw new Error("Minecraft: interner Whitelist-Kanal fehlt.");
   if (name === "Minecraft") {
     const support = channels.filter(channel => channel.type === "voice" && /^Support (?:[1-9]|10)$/.test(channel.name));
@@ -100,6 +111,7 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
 (async () => {
   await testBuilderAgainstMockGuild("Minecraft", createMinecraftPreset);
   await testBuilderAgainstMockGuild("ProfiMine", createProfiMinePreset);
+  await testBuilderAgainstMockGuild("RobloxFeuerwehr", createRobloxFeuerwehrPreset);
 })().catch(error => {
   console.error("Builder-Integrationstest fehlgeschlagen:", error);
   process.exitCode = 1;
