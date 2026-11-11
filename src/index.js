@@ -30,7 +30,19 @@ const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
 if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
 }
-const client = new Client({ intents, rest: { timeout: 60000 } });
+const client = new Client({ intents, rest: { timeout: 60000, retries: 2 } });
+
+// Discord-REST-Rate-Limits sichtbar protokollieren, damit ein pausierender
+// Serveraufbau nicht wie ein abgestürzter Bot aussieht.
+client.rest.on("rateLimited", rateLimit => {
+  console.warn("[DISCORD-API] Rate-Limit – Discord verlangt eine Pause:", JSON.stringify({
+    route: rateLimit.route,
+    method: rateLimit.method,
+    global: rateLimit.global,
+    retryAfterMs: rateLimit.retryAfter,
+    limit: rateLimit.limit
+  }));
+});
 const pendingPlans = new Map();
 const buildAbortController = new AbortController();
 
@@ -320,7 +332,7 @@ client.on("interactionCreate", async interaction => {
     if (["minecraft", "profimine", "robloxfeuerwehr"].includes(interaction.commandName)) {
       try {
         if (!isOwner(interaction)) {
-          return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
+          return interaction.editReply("Nur der konfigurierte Besitzer oder der Discord-Serverinhaber darf diesen Serveraufbau starten.");
         }
         const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : interaction.commandName === "robloxfeuerwehr" ? createRobloxFeuerwehrPreset() : createMinecraftPreset();
         // Jeder Plan bekommt eine eigene ID. Mehrere offene Vorlagen überschreiben sich nicht.
