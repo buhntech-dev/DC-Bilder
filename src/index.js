@@ -8,7 +8,7 @@ const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-pr
 const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
-const { joinSupportVoice } = require("./support-voice");
+const { handleSupportVoiceStateUpdate, setupSupportVoiceChannel } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
@@ -188,6 +188,14 @@ async function openTicket(interaction, typeKey = "support") {
   return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
 }
 
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  try {
+    await handleSupportVoiceStateUpdate(oldState, newState);
+  } catch (error) {
+    console.warn("[SUPPORT-VOICE] Fehler bei Voice-Statusänderung:", error.message);
+  }
+});
+
 client.once("clientReady", async () => {
   console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
   for (const guild of client.guilds.cache.values()) {
@@ -206,8 +214,8 @@ client.once("clientReady", async () => {
         }
       }
     } catch (error) { console.warn(`Bot-Rolle konnte auf ${guild.name} nicht vollständig vergeben werden:`, error.message); }
-    try { await joinSupportVoice(client, guild); }
-    catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
+    try { await setupSupportVoiceChannel(guild); }
+    catch (error) { console.warn(`Support-Warteraum konnte auf ${guild.name} nicht eingerichtet werden:`, error.message); }
   }
   startMinecraftStatusUpdates(client);
   startWeeklyBackups(client);
