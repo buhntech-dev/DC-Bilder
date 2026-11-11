@@ -1,7 +1,7 @@
 require("dotenv").config();
 const {
   Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags,
-  ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder
+  ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
 const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-preset");
@@ -113,13 +113,26 @@ async function sendLog(guild, message) {
     catch (error) { console.warn("Log konnte nicht gesendet werden:", error.message); }
   }
 }
-function hasPermission(interaction, permission) {
-  return interaction.memberPermissions?.has(permission) || isOwner(interaction);
+async function hasPermission(interaction, permission, commandName) {
+  if (interaction.memberPermissions?.has(permission) || isOwner(interaction)) return true;
+  if (!commandName || !interaction.guild) return false;
+  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const grantRoleName = "Befehl: " + commandName;
+  return member.roles.cache.some(role => role.name === grantRoleName);
 }
-async function openTicket(interaction) {
+const TICKET_TYPES = {
+  support: { label: "Allgemeiner Support", slug: "support", description: "Allgemeine Fragen und Hilfe" },
+  technical: { label: "Technisches Problem", slug: "technik", description: "Technik, Verbindung oder Einstellungen" },
+  bug: { label: "Bug melden", slug: "bug", description: "Fehler oder Bugs auf dem Server" },
+  player: { label: "Spieler melden", slug: "spieler", description: "Eine Meldung über ein Mitglied" },
+  other: { label: "Sonstiges", slug: "sonstiges", description: "Sonstige Anliegen" }
+};
+
+async function openTicket(interaction, typeKey = "support") {
+  const ticketType = TICKET_TYPES[typeKey] || TICKET_TYPES.support;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
-  const existing = interaction.guild.channels.cache.find(ch => ch.topic === "ticket-owner:" + interaction.user.id);
+  const existing = interaction.guild.channels.cache.find(ch => ch.topic?.startsWith("ticket-owner:" + interaction.user.id));
   if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
   const supportRoles = interaction.guild.roles.cache.filter(role => ["Test Support", "Supporter", "Senior Supporter", "Moderator", "Senior Moderator", "Administrator", "Senior Administrator", "Management", "Owner"].includes(role.name));
   const overwrites = [
@@ -129,14 +142,14 @@ async function openTicket(interaction) {
   ];
   const category = interaction.guild.channels.cache.find(ch => ch.type === ChannelType.GuildCategory && /support|ticket/i.test(ch.name));
   const ticket = await interaction.guild.channels.create({
-    name: "ticket-" + safeName, type: ChannelType.GuildText,
-    topic: "ticket-owner:" + interaction.user.id, parent: category?.id,
+    name: "ticket-" + ticketType.slug + "-" + safeName, type: ChannelType.GuildText,
+    topic: "ticket-owner:" + interaction.user.id + ";ticket-type:" + typeKey, parent: category?.id,
     permissionOverwrites: overwrites, reason: "Support-Ticket von " + interaction.user.tag
   });
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("ticket_close").setLabel("Ticket schließen").setStyle(ButtonStyle.Danger).setEmoji("🔒")
   );
-  await ticket.send({ content: interaction.user.toString() + " willkommen im Support! Beschreibe bitte dein Anliegen.", components: [row] });
+  await ticket.send({ content: interaction.user.toString() + " willkommen im Support!\n**Kategorie:** " + ticketType.label + "\n**Anliegen:** " + ticketType.description + "\nBitte beschreibe dein Anliegen möglichst genau.", components: [row] });
   await sendLog(interaction.guild, "🎫 " + interaction.user.tag + " hat ein Ticket erstellt: " + ticket.toString());
   return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
 }
@@ -260,14 +273,22 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply("Dienststatus fehlgeschlagen. Prüfe Rollen verwalten und die Rollenposition des Bots.");
     }
   }
-  if (interaction.isButton() && interaction.customId === "ticket_open") {
-    try { return await openTicket(interaction); }
+  if (interaction.isStringSelectMenu() && interaction.customId === "ticket_category_select") {
+    try { return await openTicket(interaction, interaction.values[0]); }
     catch (error) {
       console.error("Ticket konnte nicht geöffnet werden:", error);
       const message = "Ticket konnte nicht erstellt werden. Prüfe die Bot-Berechtigung Kanäle verwalten.";
       if (interaction.deferred || interaction.replied) return interaction.editReply(message);
       return interaction.reply({ content: message });
     }
+  }
+  if (interaction.isButton() && interaction.customId === "team_rules_confirm") {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const logged = await sendRuleLog(interaction.guild,
+      "✅ **Team-Regeln bestätigt:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die verbindlichen Team-Regeln bestätigt.");
+    return interaction.editReply(logged
+      ? "✅ Danke! Deine Bestätigung der Team-Regeln wurde gespeichert."
+      : "✅ Bestätigt. Der Regel-Logkanal fehlt allerdings; bitte #regel-logs erstellen.");
   }
   if (interaction.isButton() && interaction.customId === "ticket_close") {
     const match = interaction.channel?.topic?.match(/ticket-owner:(\d+)/);
@@ -424,6 +445,26 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
+    if (interaction.commandName === "befehl-freigeben") {
+      if (!isOwner(interaction)) return interaction.editReply("Nur der Serverinhaber darf Bot-Befehle an andere Mitglieder freigeben.");
+      const target = await interaction.guild.members.fetch(interaction.options.getUser("mitglied", true).id);
+      const commandName = interaction.options.getString("befehl", true);
+      const action = interaction.options.getString("aktion", true);
+      const allowedCommands = ["clear", "kick", "ban", "timeout", "announce", "lock", "unlock", "slowmode", "ticketpanel", "bewerbung-panel", "whitelist-panel"];
+      if (!allowedCommands.includes(commandName)) return interaction.editReply("Dieser Befehl kann nicht delegiert werden.");
+      const roleName = "Befehl: " + commandName;
+      let role = interaction.guild.roles.cache.find(item => item.name === roleName);
+      if (action === "freigeben") {
+        if (!role) role = await interaction.guild.roles.create({ name: roleName, color: "#5865F2", reason: "Gezielte Bot-Befehlsfreigabe durch den Serverinhaber" });
+        await target.roles.add(role, "Bot-Befehl /" + commandName + " freigegeben durch " + interaction.user.tag);
+        return interaction.editReply("✅ /" + commandName + " wurde für " + target.toString() + " freigegeben.");
+      }
+      if (role && target.roles.cache.has(role.id)) {
+        await target.roles.remove(role, "Bot-Befehl /" + commandName + " durch " + interaction.user.tag entzogen");
+      }
+      return interaction.editReply("✅ /" + commandName + " wurde für " + target.toString() + " entzogen.");
+    }
+
     const permissions = {
       clear: PermissionFlagsBits.ManageMessages, kick: PermissionFlagsBits.KickMembers,
       ban: PermissionFlagsBits.BanMembers, timeout: PermissionFlagsBits.ModerateMembers,
@@ -434,7 +475,7 @@ client.on("interactionCreate", async interaction => {
       "whitelist-panel": PermissionFlagsBits.ManageChannels
     };
     const needed = permissions[interaction.commandName];
-    if (needed && !hasPermission(interaction, needed)) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung." });
+    if (needed && !(await hasPermission(interaction, needed, interaction.commandName))) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung. Der Serverinhaber kann dir den Befehl mit /befehl-freigeben erlauben." });
 
     if (interaction.commandName === "bewerbung-panel" || interaction.commandName === "whitelist-panel") {
       const isApplication = interaction.commandName === "bewerbung-panel";
@@ -457,7 +498,14 @@ client.on("interactionCreate", async interaction => {
         const cmd = interaction.commandName;
         if (cmd === "ticketpanel") {
           const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Klicke auf Ticket erstellen. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
-          const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket_open").setLabel("Ticket erstellen").setStyle(ButtonStyle.Success).setEmoji("🎫"));
+          const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+              .setCustomId("ticket_category_select")
+              .setPlaceholder("Wähle zuerst eine Ticket-Kategorie …")
+              .addOptions(Object.entries(TICKET_TYPES).map(([value, item]) => ({
+                label: item.label, value, description: item.description, emoji: "🎫"
+              })))
+          );
           await interaction.channel.send({ embeds: [embed], components: [row] });
           return interaction.editReply({ content: "Support-Panel wurde veröffentlicht." });
         }
