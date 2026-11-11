@@ -112,7 +112,7 @@ async function handleSupportVoiceStateUpdate(oldState, newState) {
   // Sobald ein echter Nutzer den Support-Warteraum betritt, kommt der Bot dazu.
   if (newState.channelId === channel.id && oldState.channelId !== channel.id) {
     try {
-      await joinSupportVoice(newState.client, guild, channel);
+      await joinSupportVoice(guild.client, guild, channel);
     } catch (error) {
       console.warn(`[SUPPORT-VOICE] Beitritt zu #${channel.name} fehlgeschlagen:`, error.message);
     }
