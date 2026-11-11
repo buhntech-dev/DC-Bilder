@@ -354,7 +354,7 @@ async function applyServerPlan(guild, plan, options = {}) {
             "",
             "Mit der Bestätigung in **#bestätigung** erklärst du, dass du diese Regeln gelesen hast und akzeptierst. Verstöße können Verwarnungen, Timeouts, Kicks oder Banns zur Folge haben."
           ].join("\n"))
-          .setFooter({ text: "Minecraft Community • Bitte halte dich an die Regeln" });
+          .setFooter({ text: (plan.serverName || "Community") + " • Bitte halte dich an die Regeln" });
         await createdChannel.send({ embeds: [rulesEmbed] });
       }
       if (/team-regeln/.test(channelName) && type === ChannelType.GuildText) {
@@ -375,7 +375,7 @@ async function applyServerPlan(guild, plan, options = {}) {
             "",
             "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
           ].join("\n"))
-          .setFooter({ text: "Minecraft Community • Teamleitung" });
+          .setFooter({ text: (plan.serverName || "Community") + " • Teamleitung" });
         const confirmRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("team_rules_confirm")
@@ -388,9 +388,9 @@ async function applyServerPlan(guild, plan, options = {}) {
       if (channel.verify && type === ChannelType.GuildText) {
         const embed = new EmbedBuilder()
           .setColor(0x2ECC71)
-          .setTitle("Willkommen auf unserem Minecraft-Discord!")
+          .setTitle("Willkommen auf " + (plan.serverName || "unserem Discord") + "!")
           .setDescription("Bitte lies zuerst die Serverregeln. Wenn du diese akzeptierst, klicke auf **Bestätigen**. Danach erhältst du die Rolle **Mitglied** und kannst die Community-Kanäle sehen.")
-          .setFooter({ text: "Minecraft Community • Verifizierung" });
+          .setFooter({ text: (plan.serverName || "Community") + " • Verifizierung" });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("minecraft_verify_member")
