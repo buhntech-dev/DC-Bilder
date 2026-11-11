@@ -52,7 +52,7 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
   roles.set(everyone.id, everyone);
   const botRole = makeRole("Bot", 100);
   roles.set(botRole.id, botRole);
-  const botMember = { permissions: { has: () => true }, roles: { highest: botRole } };
+  const botMember = { id: "mock-bot", permissions: { has: () => true }, roles: { highest: botRole, cache: new Collection(), async add(role) { this.cache.set(role.id, role); } } };
   const ownerMember = { roles: { async add() {} } };
   const guild = {
     id: guildId, ownerId: "mock-owner", rulesChannelId: null, publicUpdatesChannelId: null,
