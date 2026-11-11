@@ -209,13 +209,15 @@ async function applyServerPlan(guild, plan, options = {}) {
     catch (progressError) { console.warn("[SERVER-BUILD] Fortschrittsmeldung fehlgeschlagen:", progressError.message); }
   };
   const createdRoleList = [];
-  await mapWithConcurrency(plan.roles, 3, async (role, index) => {
+  // Rollen werden bewusst nacheinander angelegt. Discord kann Create-Role-Aufrufe
+  // pro Server/Route drosseln; parallele Requests erzeugen lange stille Warteschlangen.
+  await mapWithConcurrency(plan.roles, 1, async (role, index) => {
     throwIfBuildAborted(buildSignal);
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
       await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
-      console.log("[SERVER-BUILD] Erstelle Rolle:", name);
+      console.log("[SERVER-BUILD] Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ":", name);
       // Erst die Rolle sicher anlegen, danach Berechtigungen separat setzen.
       // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
       const createdRole = await guild.roles.create({
@@ -225,7 +227,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         mentionable: Boolean(role.mentionable),
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       });
-      console.log("[SERVER-BUILD] Rolle erstellt:", name, createdRole.id);
+      console.log("[SERVER-BUILD] Rolle erstellt " + (index + 1) + "/" + plan.roles.length + ":", name, createdRole.id);
       throwIfBuildAborted(buildSignal);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
