@@ -725,7 +725,16 @@ client.on("interactionCreate", async interaction => {
     }
 
     pendingPlans.delete(planId);
-    await interaction.update({
+    // Button sofort bestätigen (Discord-Frist: wenige Sekunden), danach
+    // die ursprüngliche Antwort bearbeiten. Lange Serveraufbauten dürfen
+    // niemals auf interaction.update() warten.
+    try {
+      await interaction.deferUpdate();
+    } catch (ackError) {
+      console.error("[INTERACTION] Bestätigungsbutton konnte nicht rechtzeitig bestätigt werden:", ackError);
+      return;
+    }
+    await interaction.editReply({
       content: entry.replaceServer
         ? "Der Server wird neu aufgebaut …"
         : "Erstelle Rollen, Kategorien und Kanäle … bitte kurz warten.",
