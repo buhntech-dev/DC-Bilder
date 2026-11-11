@@ -265,7 +265,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     for (const ownerId of ownerIds) {
       try {
         const ownerMember = await guild.members.fetch(ownerId);
-        if (!ownerMember.roles.cache.has(ownerRole.id)) {
+        if (!ownerMember.roles.cache?.has?.(ownerRole.id)) {
           await ownerMember.roles.add(ownerRole, "Discord-Server wurde vom Inhaber aufgebaut");
         }
       } catch (error) {
@@ -289,7 +289,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         for (const member of members.values()) if (member.user.bot) botMembers.set(member.id, member);
       }
       for (const member of botMembers.values()) {
-        if (!member.roles.cache.has(botRole.id)) {
+        if (!member.roles.cache?.has?.(botRole.id)) {
           await member.roles.add(botRole, "Bot-Konto erhält die Bot-Rolle");
         }
       }
