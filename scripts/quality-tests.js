@@ -66,6 +66,16 @@ async function test(name, fn) {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
     assert.ok(!/dailyBuildLimit|maxBuildsPerDay|creationQuota|buildCooldown/i.test(source));
   });
+  await test("Slash-Befehle werden global statt nur für eine feste GUILD_ID registriert", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    assert.ok(source.includes("Routes.applicationCommands(CLIENT_ID)"));
+    assert.ok(!source.includes("GUILD_ID"));
+    assert.ok(!source.includes("applicationGuildCommands"));
+  });
+  await test("Serverinhaber jedes Discord-Servers darf den Aufbau verwalten", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes("interaction.guild?.ownerId === interaction.user.id"));
+  });
   await test("Minecraft-Preset liefert ein Objekt", () => assert.equal(typeof mc, "object"));
   await test("Minecraft-Preset hat einen Namen", () => assert.equal(mc.serverName, "Minecraft Community"));
   await test("Minecraft-Preset hat eine Zusammenfassung", () => assert.ok(mc.summary.length > 20));

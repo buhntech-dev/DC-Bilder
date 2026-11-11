@@ -83,13 +83,14 @@ const commands = [
 ] .map(command => command.toJSON());
 
 async function main() {
-  const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
-  if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
-    throw new Error("DISCORD_TOKEN, CLIENT_ID und GUILD_ID müssen in .env stehen.");
+  const { DISCORD_TOKEN, CLIENT_ID } = process.env;
+  if (!DISCORD_TOKEN || !CLIENT_ID) {
+    throw new Error("DISCORD_TOKEN und CLIENT_ID müssen in .env stehen.");
   }
   const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
-  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-  console.log("Slash-Befehle registriert: /build, /plan, /minecraft, /profimine, /robloxfeuerwehr, /website und Verwaltung.");
+  // Globale Slash-Befehle: erscheinen auf jedem Server, auf dem der Bot installiert ist.
+  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+  console.log("Globale Slash-Befehle registriert: /build, /plan, /minecraft, /profimine, /robloxfeuerwehr, /website und Verwaltung (für alle Server, auf denen der Bot installiert ist).");
 }
 main().catch(error => {
   console.error(error);
