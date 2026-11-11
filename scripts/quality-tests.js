@@ -56,6 +56,16 @@ async function test(name, fn) {
     const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
     assert.ok(source.includes("keepChannelId: interaction.channelId"));
   });
+  await test("Serveraufbau wartet auf Discord-Routen statt Lösch-/Erstellungs-Bursts zu senden", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
+    assert.ok(source.includes('options.roleMutationIntervalMs ?? 1100'));
+    assert.ok(source.includes('options.channelMutationIntervalMs ?? 250'));
+    assert.ok(source.includes('await mapWithConcurrency(category.channels, 1'));
+  });
+  await test("Serveraufbau hat kein künstliches tägliches oder dauerhaftes Erstellkontingent", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(!/dailyBuildLimit|maxBuildsPerDay|creationQuota|buildCooldown/i.test(source));
+  });
   await test("Minecraft-Preset liefert ein Objekt", () => assert.equal(typeof mc, "object"));
   await test("Minecraft-Preset hat einen Namen", () => assert.equal(mc.serverName, "Minecraft Community"));
   await test("Minecraft-Preset hat eine Zusammenfassung", () => assert.ok(mc.summary.length > 20));
