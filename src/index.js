@@ -132,7 +132,7 @@ async function openTicket(interaction, typeKey = "support") {
   const ticketType = TICKET_TYPES[typeKey] || TICKET_TYPES.support;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
-  const existing = interaction.guild.channels.cache.find(ch => ch.topic?.startsWith("ticket-owner:" + interaction.user.id));
+  const existing = interaction.guild.channels.cache.find(ch => (ch.topic === "ticket-owner:" + interaction.user.id || ch.topic?.startsWith("ticket-owner:" + interaction.user.id + ";")));
   if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
   const supportRoles = interaction.guild.roles.cache.filter(role => ["Test Support", "Supporter", "Senior Supporter", "Moderator", "Senior Moderator", "Administrator", "Senior Administrator", "Management", "Owner"].includes(role.name));
   const overwrites = [
@@ -497,7 +497,7 @@ client.on("interactionCreate", async interaction => {
       try {
         const cmd = interaction.commandName;
         if (cmd === "ticketpanel") {
-          const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Klicke auf Ticket erstellen. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
+          const embed = new EmbedBuilder().setColor(0x5865F2).setTitle("🎫 Support-Center").setDescription("Du brauchst Hilfe? Wähle unten die passende Kategorie aus. Dein Ticket ist nur für dich und das Support-Team sichtbar.");
           const row = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
               .setCustomId("ticket_category_select")
