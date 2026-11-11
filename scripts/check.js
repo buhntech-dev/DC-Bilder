@@ -23,9 +23,12 @@ for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMin
   if (preset.roles.length > 250 || preset.categories.length + channels.length > 500) throw new Error(name + ": Discord-Limit überschritten.");
   if (!preset.roles.some(role => role.name === "Owner")) throw new Error(name + ": Owner-Rolle fehlt.");
   if (name === "Roblox Feuerwehr") {
-    for (const role of ["Owner", "Wehrführung", "Leitstelle", "Einsatzleitung", "Gruppenführer", "Maschinist", "Feuerwehrmann", "Anwärter"]) if (!preset.roles.some(item => item.name === role)) throw new Error("Roblox Feuerwehr: Rolle fehlt: " + role);
+    const requiredRoles = ["Owner", "Wehrführung", "Leitstelle", "Einsatzleitung", "Gruppenführer", "Maschinist", "Feuerwehrmann", "Anwärter"];
+    for (const role of requiredRoles) if (!preset.roles.some(item => item.name === role)) throw new Error("Roblox Feuerwehr: Rolle fehlt: " + role);
     for (const channel of ["alarme", "rückmeldungen", "fahrzeugübersicht", "einsatzberichte", "dienstplan", "funk-kanal-1"]) if (!channels.some(item => item.name.toLowerCase().includes(channel))) throw new Error("Roblox Feuerwehr: Kanal fehlt: " + channel);
     if (channels.filter(item => item.type === "voice").length < 6) throw new Error("Roblox Feuerwehr: Funk-Sprachkanäle fehlen.");
+    const knownRoles = new Set(roleNames);
+    for (const channel of channels) for (const role of channel.privateToRoles || []) if (!knownRoles.has(role.toLowerCase())) throw new Error("Roblox Feuerwehr: Unbekannte private Rolle " + role + " in " + channel.name);
   }
   if (name === "Minecraft" && !preset.roles.some(role => role.name === "Test Support")) throw new Error("Minecraft: Test Support-Rolle fehlt.");
   if (name === "Minecraft" && !preset.categories.some(category => category.channels.some(channel => channel.name.includes("whitelist-bearbeitung")))) throw new Error("Minecraft: interner Whitelist-Kanal fehlt.");
@@ -106,6 +109,7 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
 (async () => {
   await testBuilderAgainstMockGuild("Minecraft", createMinecraftPreset);
   await testBuilderAgainstMockGuild("ProfiMine", createProfiMinePreset);
+  await testBuilderAgainstMockGuild("Roblox Feuerwehr", createRobloxFeuerwehrPreset);
 })().catch(error => {
   console.error("Builder-Integrationstest fehlgeschlagen:", error);
   process.exitCode = 1;
