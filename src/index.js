@@ -30,7 +30,12 @@ const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
 if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
 }
-const client = new Client({ intents, rest: { timeout: 60000, retries: 2 } });
+const client = new Client({ intents, rest: {
+  timeout: 60000,
+  retries: 2,
+  // Kurze Limits normal abwarten; sehr lange Sperren sofort als Fehler melden.
+  rejectOnRateLimit: rateLimit => rateLimit.retryAfter > 30_000
+} });
 
 // Discord-REST-Rate-Limits sichtbar protokollieren, damit ein pausierender
 // Serveraufbau nicht wie ein abgestürzter Bot aussieht.
@@ -340,22 +345,24 @@ client.on("interactionCreate", async interaction => {
           if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
         }
         const planId = interaction.id;
-        pendingPlans.set(planId, { plan, replaceServer: true, createdAt: Date.now() });
+        const isRobloxFire = interaction.commandName === "robloxfeuerwehr";
+        const replaceServer = !isRobloxFire;
+        pendingPlans.set(planId, { plan, replaceServer, mergeExisting: isRobloxFire, createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
-            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Ja – Feuerwehr-Discord neu aufbauen" : "Ja – Minecraft-Server neu aufbauen")
-            .setStyle(ButtonStyle.Danger),
+            .setCustomId(`${replaceServer ? "finalreplace" : "apply"}:${interaction.user.id}:${planId}`)
+            .setLabel(isRobloxFire ? "Feuerwehr-Server erstellen / fortsetzen" : interaction.commandName === "profimine" ? "Ja – ProfiMine neu aufbauen" : "Ja – Minecraft-Server neu aufbauen")
+            .setStyle(replaceServer ? ButtonStyle.Danger : ButtonStyle.Success),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
         return interaction.editReply({
-          content: interaction.commandName === "profimine"
-            ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
-            : interaction.commandName === "robloxfeuerwehr"
-              ? "Prüfe den Roblox-Feuerwehr-Discord. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
+          content: isRobloxFire
+            ? "Prüfe den Roblox-Feuerwehr-Discord. Vorhandene Rollen, Kategorien und Kanäle bleiben erhalten; fehlende Elemente werden ergänzt. Nach einer Discord-Sperre kannst du denselben Befehl später erneut starten."
+            : interaction.commandName === "profimine"
+              ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
               : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
-          embeds: [planEmbed(plan, true)], components: [row]
+          embeds: [planEmbed(plan, replaceServer)], components: [row]
         });
       } catch (error) {
         console.error("Fehler bei /minecraft:", error);
@@ -744,6 +751,7 @@ client.on("interactionCreate", async interaction => {
       }
       const result = await applyServerPlan(interaction.guild, entry.plan, {
         replaceServer: entry.replaceServer,
+        mergeExisting: entry.mergeExisting === true,
         ownerId: interaction.guild.ownerId,
         ownerIds: [process.env.OWNER_ID],
         assignAllBots: String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true",
@@ -776,7 +784,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Neu erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**. Bereits vorhanden und weiterverwendet: **${result.reusedRoles || 0} Rollen**, **${result.reusedCategories || 0} Kategorien** und **${result.reusedChannels || 0} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
