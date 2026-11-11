@@ -643,6 +643,39 @@ async function test(name, fn) {
     assert.ok(source.includes('progressChannel.delete("Temporärer Fortschrittskanal automatisch entfernt")'));
   });
 
+
+  await test("Team-Regeln haben eine Bestätigung statt Beschäftigungsformular", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/discord-builder.js"), "utf8");
+    assert.ok(source.includes('setCustomId("team_rules_confirm")'));
+    assert.ok(source.includes('setLabel("Team-Regeln bestätigen")'));
+    assert.ok(!source.includes("employment_open"));
+    assert.ok(!source.includes("Team-Beschäftigungsformular"));
+  });
+  await test("Ticketpanel bietet auswählbare Ticket-Kategorien", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    for (const type of ["support", "technical", "bug", "player", "other"]) assert.ok(source.includes(type));
+    assert.ok(source.includes('setCustomId("ticket_category_select")'));
+  });
+  await test("Ticket-Kategorie wird im Ticketkanal gespeichert", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes('";ticket-type:" + typeKey'));
+    assert.ok(source.includes('interaction.values[0]'));
+  });
+  await test("Befehlsfreigabe ist registriert und nur Owner dürfen sie ausführen", () => {
+    const commands = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/register-commands.js"), "utf8");
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(commands.includes('setName("befehl-freigeben")'));
+    assert.ok(source.includes('interaction.commandName === "befehl-freigeben"'));
+    assert.ok(source.includes('if (!isOwner(interaction)) return interaction.editReply("Nur der Serverinhaber'));
+  });
+  await test("Befehlsfreigabe wird über eine Discord-Rolle dauerhaft gespeichert", () => {
+    const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../src/index.js"), "utf8");
+    assert.ok(source.includes('"Befehl: " + commandName'));
+    assert.ok(source.includes('target.roles.add(role'));
+    assert.ok(source.includes('target.roles.remove(role'));
+    assert.ok(source.includes('await hasPermission(interaction, needed, interaction.commandName)'));
+  });
+
   if (passed < 40) throw new Error("Es wurden nur " + passed + " Tests ausgeführt; mindestens 40 sind erforderlich.");
   process.stdout.write("\n" + passed + " automatisierte Qualitätstests bestanden.\n");
 })().catch(error => {
