@@ -109,7 +109,8 @@ async function applyServerPlan(guild, plan, options = {}) {
   const createdRoles = new Map();
   const created = {
     roles: 0, categories: 0, channels: 0,
-    deletedChannels: 0, deletedRoles: 0, skippedRoles: 0, failedDeletes: 0,
+    reusedRoles: 0, reusedCategories: 0, reusedChannels: 0,
+    deletedChannels: 0, deletedRoles: 0, skippedRoles: 0,
     failedItems: 0, errors: []
   };
 
@@ -143,9 +144,24 @@ async function applyServerPlan(guild, plan, options = {}) {
   const existingRolesAfterMode = options.replaceServer === true
     ? guild.roles.cache.size - deletableRoles.length
     : guild.roles.cache.size;
-  const projectedChannels = existingChannelsAfterMode + plan.categories.length +
-    plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
-  const projectedRoles = existingRolesAfterMode + plan.roles.length;
+  const missingRoleCount = options.mergeExisting
+    ? plan.roles.filter(item => !guild.roles.cache.some(role => !role.managed && role.name.toLowerCase() === cleanName(item.name, "").toLowerCase())).length
+    : plan.roles.length;
+  const missingCategoryCount = options.mergeExisting
+    ? plan.categories.filter(item => !guild.channels.cache.some(channel => channel.type === ChannelType.GuildCategory && channel.name === cleanName(item.name, "Kategorie"))).length
+    : plan.categories.length;
+  const missingChannelCount = options.mergeExisting
+    ? plan.categories.reduce((total, item) => {
+        const parent = guild.channels.cache.find(channel => channel.type === ChannelType.GuildCategory && channel.name === cleanName(item.name, "Kategorie"));
+        return total + (parent
+          ? item.channels.filter(channel => !guild.channels.cache.some(existing => existing.parentId === parent.id && existing.name === cleanName(channel.name, "neuer-kanal").toLowerCase() && existing.type === (channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText))).length
+          : item.channels.length);
+      }, 0)
+    : plan.categories.reduce((total, item) => total + item.channels.length, 0);
+  const projectedChannels = options.mergeExisting
+    ? guild.channels.cache.size + missingCategoryCount + missingChannelCount
+    : existingChannelsAfterMode + plan.categories.length + plan.categories.reduce((sum, item) => sum + item.channels.length, 0);
+  const projectedRoles = existingRolesAfterMode + missingRoleCount;
   if (projectedChannels > 500) throw new Error("Der Neuaufbau würde Discords Limit von 500 Kanälen überschreiten. Es wurde nichts gelöscht.");
   if (projectedRoles > 250) throw new Error("Der Neuaufbau würde Discords Limit von 250 Rollen überschreiten. Es wurde nichts gelöscht.");
 
@@ -216,22 +232,27 @@ async function applyServerPlan(guild, plan, options = {}) {
     const name = cleanName(role.name, "Neue Rolle");
     try {
       const permissions = rolePermissions(name);
-      await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
-      console.log("[SERVER-BUILD] Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ":", name);
-      // Erst die Rolle sicher anlegen, danach Berechtigungen separat setzen.
-      // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
-      const createdRole = await guild.roles.create({
-        name,
-        colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) },
-        hoist: Boolean(role.hoist),
-        mentionable: Boolean(role.mentionable),
-        reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-      });
-      console.log("[SERVER-BUILD] Rolle erstellt " + (index + 1) + "/" + plan.roles.length + ":", name, createdRole.id);
+      const existingRole = options.mergeExisting ? guild.roles.cache.find(item => !item.managed && item.name.toLowerCase() === name.toLowerCase()) : null;
+      let createdRole = existingRole;
+      if (existingRole) {
+        created.reusedRoles++;
+        console.log("[SERVER-BUILD] Rolle bereits vorhanden " + (index + 1) + "/" + plan.roles.length + ":", name, existingRole.id);
+      } else {
+        await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
+        console.log("[SERVER-BUILD] Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ":", name);
+        createdRole = await guild.roles.create({
+          name,
+          colors: { primaryColor: parseInt(validColor(role.color).slice(1), 16) },
+          hoist: Boolean(role.hoist),
+          mentionable: Boolean(role.mentionable),
+          reason: "Discord Server Builder – vom Serverinhaber bestätigt"
+        });
+        console.log("[SERVER-BUILD] Rolle erstellt " + (index + 1) + "/" + plan.roles.length + ":", name, createdRole.id);
+        created.roles++;
+      }
       throwIfBuildAborted(buildSignal);
       createdRoles.set(name.toLowerCase(), createdRole);
       createdRoleList.push({ role: createdRole, index });
-      created.roles++;
       if (permissions.length) {
         try {
           await createdRole.setPermissions(permissions, "Discord Server Builder – Rollenrechte setzen");
@@ -244,6 +265,13 @@ async function applyServerPlan(guild, plan, options = {}) {
       await reportProgress("Rollen: **" + created.roles + "/" + plan.roles.length + "** von **" + plan.roles.length + "** erstellt. Als Nächstes kommen Kategorien und Kanäle …");
     } catch (error) {
       if (error?.code === "BUILD_ABORTED") throw error;
+      if (error?.name === "RateLimitError" || error?.status === 429 || error?.httpStatus === 429) {
+        const retryAfterMs = Number(error.retryAfter || error.data?.retryAfter || 0);
+        const rateError = new Error("Discord hat die Rollen-Erstellung vorübergehend gesperrt. Der Aufbau wurde sicher pausiert; bereits vorhandene Elemente bleiben erhalten. Bitte später denselben Befehl erneut starten, um fehlende Elemente zu ergänzen." + (retryAfterMs > 0 ? " Wartezeit laut Discord: " + Math.ceil(retryAfterMs / 3600000) + " Stunden." : ""));
+        rateError.code = "DISCORD_RATE_LIMIT";
+        rateError.retryAfterMs = retryAfterMs;
+        throw rateError;
+      }
       created.failedItems++;
       created.errors.push("Rolle " + name + ": " + String(error.message || error));
       console.error("[SERVER-BUILD] Rolle fehlgeschlagen:", name, error);
@@ -309,12 +337,18 @@ async function applyServerPlan(guild, plan, options = {}) {
     await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
     try {
-      parent = await guild.channels.create({
-        name: cleanName(category.name, "Kategorie"),
-        type: ChannelType.GuildCategory,
-        reason: "Discord Server Builder – vom Serverinhaber bestätigt"
-      });
-      created.categories++;
+      parent = options.mergeExisting ? guild.channels.cache.find(channel => channel.type === ChannelType.GuildCategory && channel.name === cleanName(category.name, "Kategorie")) : null;
+      if (parent) {
+        created.reusedCategories++;
+        console.log("[SERVER-BUILD] Kategorie bereits vorhanden:", parent.name, parent.id);
+      } else {
+        parent = await guild.channels.create({
+          name: cleanName(category.name, "Kategorie"),
+          type: ChannelType.GuildCategory,
+          reason: "Discord Server Builder – vom Serverinhaber bestätigt"
+        });
+        created.categories++;
+      }
     } catch (error) {
       created.failedItems++;
       created.errors.push("Kategorie " + category.name + ": " + String(error.message || error));
@@ -329,6 +363,12 @@ async function applyServerPlan(guild, plan, options = {}) {
       try {
       await reportProgress("Kategorie " + categoryIndex + "/" + plan.categories.length + " – Kanal " + displayChannelIndex + "/" + category.channels.length + ": **#" + channelName + "** …");
       const type = channel.type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText;
+      const existingChannel = options.mergeExisting ? guild.channels.cache.find(existing => existing.parentId === parent.id && existing.name === channelName && existing.type === type) : null;
+      if (existingChannel) {
+        created.reusedChannels++;
+        console.log("[SERVER-BUILD] Kanal bereits vorhanden:", channelName, existingChannel.id);
+        return;
+      }
       const channelOptions = {
         name: channelName, type, parent: parent.id,
         permissionOverwrites: buildChannelOverwrites(guild, channel.privateToRoles, createdRoles, options.ownerId, botMemberForCheck.id),
