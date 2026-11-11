@@ -30,7 +30,9 @@ const commands = [
     .addStringOption(o => o.setName("fahrzeuge").setDescription("Alarmierte Fahrzeuge, optional").setRequired(false).setMaxLength(500)),
   new SlashCommandBuilder()
     .setName("website")
-    .setDescription("Erstellt eine moderne Minecraft-Server-Website als HTML-Datei"),
+    .setDescription("Erstellt eine moderne Feuerwehr- oder Minecraft-Website als HTML-Datei")
+    .addStringOption(o => o.setName("bereich").setDescription("Welche Website soll erstellt werden?").setRequired(true)
+      .addChoices({ name: "Feuerwehr / Freiburg V2", value: "feuerwehr" }, { name: "Minecraft / ProfiMine", value: "minecraft" })),
   new SlashCommandBuilder()
     .setName("plan")
     .setDescription("Erstellt einen Serverplan, ohne etwas am Server zu ändern")
