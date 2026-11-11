@@ -8,7 +8,7 @@ const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-pr
 const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
-const { joinSupportVoice } = require("./support-voice");
+const { handleSupportVoiceStateUpdate, setupSupportVoiceChannel } = require("./support-voice");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
@@ -147,7 +147,19 @@ async function openTicket(interaction, typeKey = "support") {
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 18) || "mitglied";
   const existing = interaction.guild.channels.cache.find(ch => (ch.topic === "ticket-owner:" + interaction.user.id || ch.topic?.startsWith("ticket-owner:" + interaction.user.id + ";")));
   if (existing) return interaction.editReply("Du hast bereits ein offenes Ticket: " + existing);
-  const supportRoles = interaction.guild.roles.cache.filter(role => ["Test Support", "Supporter", "Senior Supporter", "Moderator", "Senior Moderator", "Administrator", "Senior Administrator", "Management", "Owner"].includes(role.name));
+  // Support-Rollen dynamisch finden; optional feste Rollen-ID über SUPPORT_ROLE_ID.
+  const configuredSupportRole = process.env.SUPPORT_ROLE_ID
+    ? interaction.guild.roles.cache.get(process.env.SUPPORT_ROLE_ID)
+    : null;
+  const supportRoles = interaction.guild.roles.cache.filter(role =>
+    role.id === configuredSupportRole?.id ||
+    /^(test )?(senior )?support(er)?$/i.test(role.name) ||
+    /^(senior )?moderator$/i.test(role.name) ||
+    ["Administrator", "Senior Administrator", "Management", "Owner"].includes(role.name)
+  );
+  const pingRoles = supportRoles.filter(role =>
+    role.id === configuredSupportRole?.id || /support/i.test(role.name)
+  );
   const overwrites = [
     { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
@@ -160,12 +172,29 @@ async function openTicket(interaction, typeKey = "support") {
     permissionOverwrites: overwrites, reason: "Support-Ticket von " + interaction.user.tag
   });
   const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("ticket_claim").setLabel("Ticket übernehmen").setStyle(ButtonStyle.Success).setEmoji("🙋"),
     new ButtonBuilder().setCustomId("ticket_close").setLabel("Ticket schließen").setStyle(ButtonStyle.Danger).setEmoji("🔒")
   );
-  await ticket.send({ content: interaction.user.toString() + " willkommen im Support!\n**Kategorie:** " + ticketType.label + "\n**Anliegen:** " + ticketType.description + "\nBitte beschreibe dein Anliegen möglichst genau.", components: [row] });
+  const roleMentions = pingRoles.map(role => role.toString()).join(" ");
+  const alertText = roleMentions
+    ? "🚨 **Neues Support-Ticket – bitte ein Supporter übernehmen!** " + roleMentions
+    : "⚠️ **Keine Supporter-Rolle gefunden.** Lege eine Rolle namens Supporter an oder setze SUPPORT_ROLE_ID in Railway.";
+  await ticket.send({
+    content: interaction.user.toString() + " willkommen im Support!\\n" + alertText + "\\n**Kategorie:** " + ticketType.label + "\\n**Anliegen:** " + ticketType.description + "\\nBitte beschreibe dein Anliegen möglichst genau.",
+    components: [row],
+    allowedMentions: { users: [interaction.user.id], roles: pingRoles.map(role => role.id) }
+  });
   await sendLog(interaction.guild, "🎫 " + interaction.user.tag + " hat ein Ticket erstellt: " + ticket.toString());
   return interaction.editReply("Dein Ticket wurde erstellt: " + ticket.toString());
 }
+
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  try {
+    await handleSupportVoiceStateUpdate(oldState, newState);
+  } catch (error) {
+    console.warn("[SUPPORT-VOICE] Fehler bei Voice-Statusänderung:", error.message);
+  }
+});
 
 client.once("clientReady", async () => {
   console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
@@ -185,8 +214,8 @@ client.once("clientReady", async () => {
         }
       }
     } catch (error) { console.warn(`Bot-Rolle konnte auf ${guild.name} nicht vollständig vergeben werden:`, error.message); }
-    try { await joinSupportVoice(client, guild); }
-    catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
+    try { await setupSupportVoiceChannel(guild); }
+    catch (error) { console.warn(`Support-Warteraum konnte auf ${guild.name} nicht eingerichtet werden:`, error.message); }
   }
   startMinecraftStatusUpdates(client);
   startWeeklyBackups(client);
@@ -312,10 +341,26 @@ client.on("interactionCreate", async interaction => {
       ? "✅ Danke! Deine Bestätigung der Team-Regeln wurde gespeichert."
       : "✅ Bestätigt. Der Regel-Logkanal fehlt allerdings; bitte #regel-logs erstellen.");
   }
+  if (interaction.isButton() && interaction.customId === "ticket_claim") {
+    const isSupporter = interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ||
+      interaction.member?.roles?.cache?.some(role => /support|moderator|administrator|management|owner/i.test(role.name));
+    if (!isSupporter) {
+      return interaction.reply({ content: "Nur das Support-Team kann dieses Ticket übernehmen.", flags: MessageFlags.Ephemeral });
+    }
+    const currentTopic = interaction.channel.topic || "";
+    if (/;claimed-by:\\d+/.test(currentTopic)) {
+      return interaction.reply({ content: "Dieses Ticket wurde bereits übernommen.", flags: MessageFlags.Ephemeral });
+    }
+    await interaction.channel.setTopic(currentTopic + ";claimed-by:" + interaction.user.id, "Supporter übernimmt Ticket");
+    await interaction.reply({ content: "🙋 " + interaction.user.toString() + " hat das Ticket übernommen." });
+    await sendLog(interaction.guild, "🙋 " + interaction.user.tag + " hat " + interaction.channel.toString() + " übernommen.");
+    return;
+  }
   if (interaction.isButton() && interaction.customId === "ticket_close") {
     const match = interaction.channel?.topic?.match(/ticket-owner:(\d+)/);
     const ownerId = match && match[1];
-    if (!hasPermission(interaction, PermissionFlagsBits.ManageChannels) && ownerId !== interaction.user.id) {
+    const canManage = await hasPermission(interaction, PermissionFlagsBits.ManageChannels);\n    if (!canManage && ownerId !== interaction.user.id) {
       return interaction.reply({ content: "Nur Ticket-Ersteller oder Team dürfen schließen.", flags: MessageFlags.Ephemeral });
     }
     await interaction.reply({ content: "🔒 Ticket wird geschlossen und in 5 Sekunden gelöscht." });

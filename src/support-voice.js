@@ -83,17 +83,57 @@ async function ensureSupportVoiceChannel(guild, botMember) {
   return channel;
 }
 
-async function joinSupportVoice(client, guild) {
+async function findSupportVoiceChannel(guild) {
+  await guild.channels.fetch();
   const configuredId = process.env.SUPPORT_VOICE_CHANNEL_ID;
-  let channel = null;
   if (configuredId) {
-    channel = guild.channels.cache.get(configuredId) ||
-      await guild.channels.fetch(configuredId).catch(() => null);
+    const configured = guild.channels.cache.get(configuredId);
+    if (configured?.isVoiceBased()) return configured;
   }
-  if (!channel || !channel.isVoiceBased()) {
-    await guild.channels.fetch();
-    channel = guild.channels.cache.find(ch => ch.isVoiceBased() && /support/i.test(ch.name));
+  return guild.channels.cache.find(ch =>
+    ch.isVoiceBased() && /support-warteraum|support[- ]?waiting|support/i.test(ch.name)
+  ) || null;
+}
+
+async function setupSupportVoiceChannel(guild) {
+  const existing = await findSupportVoiceChannel(guild);
+  if (existing) return existing;
+  const botMember = await guild.members.fetchMe();
+  return ensureSupportVoiceChannel(guild, botMember);
+}
+
+async function handleSupportVoiceStateUpdate(oldState, newState) {
+  const member = newState.member || oldState.member;
+  if (!member || member.user.bot) return;
+  const guild = newState.guild || oldState.guild;
+  const channel = await findSupportVoiceChannel(guild);
+  if (!channel) return;
+
+  // Sobald ein echter Nutzer den Support-Warteraum betritt, kommt der Bot dazu.
+  if (newState.channelId === channel.id && oldState.channelId !== channel.id) {
+    try {
+      await joinSupportVoice(guild.client, guild, channel);
+    } catch (error) {
+      console.warn(`[SUPPORT-VOICE] Beitritt zu #${channel.name} fehlgeschlagen:`, error.message);
+    }
+    return;
   }
+
+  // Wenn der letzte echte Nutzer den Warteraum verlässt, geht auch der Bot.
+  if (oldState.channelId === channel.id && newState.channelId !== channel.id) {
+    const remainingHumans = channel.members.filter(m => !m.user.bot);
+    if (remainingHumans.size === 0) {
+      const connection = getVoiceConnection(guild.id);
+      if (connection) {
+        connection.destroy();
+        console.log(`[SUPPORT-VOICE] Warteraum leer – Bot verlässt #${channel.name} auf ${guild.name}.`);
+      }
+    }
+  }
+}
+
+async function joinSupportVoice(client, guild, targetChannel = null) {
+  let channel = targetChannel || await findSupportVoiceChannel(guild);
   const existing = getVoiceConnection(guild.id);
   if (existing) return existing;
   const botMember = await guild.members.fetchMe();
@@ -116,7 +156,7 @@ async function joinSupportVoice(client, guild) {
     channelId: channel.id,
     guildId: guild.id,
     adapterCreator: guild.voiceAdapterCreator,
-    selfDeaf: true,
+    selfDeaf: false,
     selfMute: false
   });
   try {
@@ -139,4 +179,4 @@ async function joinSupportVoice(client, guild) {
   }
 }
 
-module.exports = { joinSupportVoice, createSupportChime, buildSupportVoiceOverwrites, ensureSupportVoiceChannel };
+module.exports = { joinSupportVoice, handleSupportVoiceStateUpdate, setupSupportVoiceChannel, createSupportChime, buildSupportVoiceOverwrites, ensureSupportVoiceChannel };
