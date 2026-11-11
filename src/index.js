@@ -273,6 +273,15 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply("Dienststatus fehlgeschlagen. Prüfe Rollen verwalten und die Rollenposition des Bots.");
     }
   }
+  if (interaction.isButton() && interaction.customId === "ticket_open") {
+    try { return await openTicket(interaction, "support"); }
+    catch (error) {
+      console.error("Altes Support-Ticket konnte nicht geöffnet werden:", error);
+      const message = "Ticket konnte nicht erstellt werden. Prüfe die Bot-Berechtigung Kanäle verwalten.";
+      if (interaction.deferred || interaction.replied) return interaction.editReply(message);
+      return interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
+    }
+  }
   if (interaction.isStringSelectMenu() && interaction.customId === "ticket_category_select") {
     try { return await openTicket(interaction, interaction.values[0]); }
     catch (error) {
@@ -445,6 +454,59 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
+    if (interaction.commandName === "teamregeln-panel") {
+      if (!hasPermission(interaction, PermissionFlagsBits.ManageChannels)) {
+        return interaction.editReply("Dir fehlt die Berechtigung Kanäle verwalten.");
+      }
+      await interaction.guild.channels.fetch();
+      const channel = interaction.guild.channels.cache.find(item =>
+        item.isTextBased() && item.name.toLowerCase().includes("team-regeln")
+      );
+      if (!channel) return interaction.editReply("Der Kanal #team-regeln wurde nicht gefunden.");
+      const recent = await channel.messages.fetch({ limit: 100 });
+      const obsolete = recent.filter(message =>
+        message.author.id === client.user.id && (
+          message.embeds.some(embed => embed.title === "📋 Team-Beschäftigungsformular") ||
+          message.components.some(row => row.components.some(component => component.customId === "employment_open"))
+        )
+      );
+      for (const message of obsolete.values()) await message.delete().catch(error =>
+        console.warn("Altes Beschäftigungsformular konnte nicht gelöscht werden:", error.message)
+      );
+      const rulesEmbed = new EmbedBuilder()
+        .setColor(0x9b59b6)
+        .setTitle("📜 Verbindliche Team-Regeln")
+        .setDescription([
+          "**1. Respekt:** Wir behandeln Mitglieder und Teamkollegen freundlich und professionell.",
+          "**2. Vertraulichkeit:** Interne Gespräche, Bewerbungen, Reports und persönliche Daten bleiben intern.",
+          "**3. Rechte:** Teamrechte werden nur für dienstliche Aufgaben genutzt. Machtmissbrauch ist verboten.",
+          "**4. Neutralität:** Entscheidungen erfolgen fair, nachvollziehbar und ohne persönliche Bevorzugung.",
+          "**5. Aktivität:** Abwesenheiten und längere Pausen werden der Teamleitung mitgeteilt.",
+          "**6. Support:** Tickets werden sachlich, zeitnah und vollständig bearbeitet.",
+          "**7. Beweise:** Sanktionen und wichtige Entscheidungen werden mit nachvollziehbaren Belegen dokumentiert.",
+          "**8. Kommunikation:** Interne Konflikte werden ruhig im passenden Teamkanal geklärt.",
+          "**9. Sicherheit:** Keine Tokens, Passwörter oder privaten Zugangsdaten in Discord teilen.",
+          "**10. Vorbildfunktion:** Teammitglieder halten die Serverregeln ein und repräsentieren die Community positiv.",
+          "",
+          "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
+        ].join("\\n"))
+        .setFooter({ text: "Minecraft Community • Teamleitung" });
+      const confirmRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("team_rules_confirm")
+          .setLabel("Team-Regeln bestätigen").setStyle(ButtonStyle.Success).setEmoji("✅")
+      );
+      const existingRules = recent.find(message =>
+        message.author.id === client.user.id &&
+        message.embeds.some(embed => embed.title === "📜 Verbindliche Team-Regeln")
+      );
+      if (existingRules) {
+        await existingRules.edit({ embeds: [rulesEmbed], components: [confirmRow] });
+      } else {
+        await channel.send({ embeds: [rulesEmbed], components: [confirmRow] });
+      }
+      return interaction.editReply("✅ Team-Regelkanal aktualisiert. Alte Beschäftigungsformulare wurden entfernt und die Bestätigungsschaltfläche ist aktiv.");
+    }
+
     if (interaction.commandName === "befehl-freigeben") {
       if (!isOwner(interaction)) return interaction.editReply("Nur der Serverinhaber darf Bot-Befehle an andere Mitglieder freigeben.");
       const target = await interaction.guild.members.fetch(interaction.options.getUser("mitglied", true).id);
@@ -472,7 +534,8 @@ client.on("interactionCreate", async interaction => {
       unlock: PermissionFlagsBits.ManageChannels, slowmode: PermissionFlagsBits.ManageChannels,
       ticketpanel: PermissionFlagsBits.ManageChannels,
       "bewerbung-panel": PermissionFlagsBits.ManageChannels,
-      "whitelist-panel": PermissionFlagsBits.ManageChannels
+      "whitelist-panel": PermissionFlagsBits.ManageChannels,
+      "teamregeln-panel": PermissionFlagsBits.ManageChannels
     };
     const needed = permissions[interaction.commandName];
     if (needed && !(await hasPermission(interaction, needed, interaction.commandName))) return interaction.editReply({ content: "Dir fehlt die nötige Berechtigung. Der Serverinhaber kann dir den Befehl mit /befehl-freigeben erlauben." });
