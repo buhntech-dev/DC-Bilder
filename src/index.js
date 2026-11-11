@@ -404,6 +404,71 @@ client.on("interactionCreate", async interaction => {
         return interaction.editReply("Minecraft-Status fehlgeschlagen: " + String(error.message || error).slice(0, 500));
       }
     }
+    if (interaction.commandName === "alarm") {
+      try {
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        const allowedRoles = ["Owner", "Projektinhaber", "Stellv. Projektinhaber", "Projektleitung", "Serverleitung", "Wehrleitung", "Stellv. Wehrleitung", "Leitstellenleitung", "Disponent", "Einsatzleitung"];
+        const authorized = isOwner(interaction) ||
+          member.permissions.has(PermissionFlagsBits.Administrator) ||
+          member.permissions.has(PermissionFlagsBits.ManageMessages) ||
+          member.roles.cache.some(role => allowedRoles.includes(role.name));
+        if (!authorized) {
+          return interaction.editReply("⛔ Nur Wehrleitung, Leitstelle, Einsatzleitung oder Administratoren dürfen einen Einsatzalarm auslösen.");
+        }
+
+        await interaction.guild.channels.fetch();
+        const alarmChannel = interaction.guild.channels.cache.find(channel =>
+          channel.isTextBased() && ["🚨・einsatz-alarmierungen", "einsatz-alarmierungen", "alarmierungen"].includes(channel.name)
+        );
+        if (!alarmChannel) {
+          return interaction.editReply("❌ Der Alarmkanal wurde nicht gefunden. Erstelle **#🚨・einsatz-alarmierungen** oder **#einsatz-alarmierungen**.");
+        }
+
+        const plz = interaction.options.getString("plz", true).trim();
+        const keyword = interaction.options.getString("stichwort", true).trim();
+        const address = interaction.options.getString("adresse", true).trim();
+        const report = interaction.options.getString("meldebild", true).trim();
+        const vehicles = interaction.options.getString("fahrzeuge")?.trim() || "Noch keine Fahrzeuge festgelegt";
+        const notifyNames = ["Feuerwehr", "Fahrzeugführer", "Einsatzleitung", "Leitstellenleitung", "Disponent"];
+        const notifyRoles = interaction.guild.roles.cache.filter(role => notifyNames.includes(role.name));
+        const mentions = [...notifyRoles.values()].map(role => role.toString()).join(" ");
+        const embed = new EmbedBuilder()
+          .setColor(0xE74C3C)
+          .setTitle("🚨 EINSATZALARM – FEUERWEHR")
+          .setDescription("**" + keyword + "**")
+          .addFields(
+            { name: "📮 Postleitzahl", value: plz, inline: true },
+            { name: "📍 Einsatzadresse", value: address, inline: true },
+            { name: "📝 Meldebild", value: report },
+            { name: "🚒 Alarmierte Fahrzeuge", value: vehicles },
+            { name: "👨‍🚒 Alarmierung durch", value: interaction.user.toString(), inline: true },
+            { name: "🕒 Alarmzeit", value: "<t:" + Math.floor(Date.now() / 1000) + ":T>", inline: true }
+          )
+          .setFooter({ text: interaction.guild.name + " • Feuerwehr-Leitstelle" })
+          .setTimestamp();
+        await alarmChannel.send({
+          content: mentions || "🚨 **Einsatzalarm für die Feuerwehr!**",
+          embeds: [embed],
+          allowedMentions: { roles: [...notifyRoles.keys()], users: [], parse: [] }
+        });
+
+        const logChannel = interaction.guild.channels.cache.find(channel =>
+          channel.isTextBased() && ["🚨・alarm-logs", "alarm-logs"].includes(channel.name)
+        );
+        if (logChannel) {
+          await logChannel.send({ embeds: [new EmbedBuilder().setColor(0x7F1D1D)
+            .setTitle("📋 Alarm protokolliert")
+            .setDescription("Alarm **" + keyword + "** durch " + interaction.user.toString() + " in " + alarmChannel.toString() + ".")
+            .addFields({ name: "Adresse", value: address, inline: true }, { name: "PLZ", value: plz, inline: true })
+            .setTimestamp()] });
+        }
+        return interaction.editReply("✅ Einsatzalarm wurde in " + alarmChannel.toString() + " ausgelöst. Die vorhandenen Feuerwehr- und Leitstellenrollen wurden benachrichtigt.");
+      } catch (error) {
+        console.error("Feuerwehr-Alarm fehlgeschlagen:", error);
+        return interaction.editReply("❌ Alarm konnte nicht ausgelöst werden: " + String(error.message || error).slice(0, 450));
+      }
+    }
+
     if (interaction.commandName === "beforderung") {
       try {
         const target = interaction.options.getMember("mitglied");
@@ -447,10 +512,13 @@ client.on("interactionCreate", async interaction => {
     }
     if (interaction.commandName === "website") {
       try {
-        const html = buildWebsiteHtml(interaction.guild.name);
-        const file = new AttachmentBuilder(Buffer.from(html, "utf8"), { name: "minecraft-website.html" });
-        await interaction.channel.send({ content: "🌐 **Deine Website ist fertig.** Die HTML-Datei kannst du herunterladen und bei einem Webhoster veröffentlichen.", files: [file] });
-        return interaction.editReply("✅ Website wurde als HTML-Datei erstellt und im aktuellen Kanal veröffentlicht.");
+        const type = interaction.options.getString("bereich", true);
+        const html = buildWebsiteHtml(interaction.guild.name, { type });
+        const fileName = type === "feuerwehr" ? "feuerwehr-website.html" : "minecraft-website.html";
+        const label = type === "feuerwehr" ? "Feuerwehr-Website" : "Minecraft-Website";
+        const file = new AttachmentBuilder(Buffer.from(html, "utf8"), { name: fileName });
+        await interaction.channel.send({ content: "🌐 **Deine " + label + " ist fertig.** Die moderne, responsive HTML-Datei kannst du herunterladen und bei einem Webhoster veröffentlichen.", files: [file] });
+        return interaction.editReply("✅ " + label + " wurde erstellt und im aktuellen Kanal veröffentlicht.");
       } catch (error) {
         console.error("Website-Erstellung fehlgeschlagen:", error);
         return interaction.editReply("Website konnte nicht erstellt werden: " + String(error.message || error).slice(0, 500));

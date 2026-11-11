@@ -21,8 +21,18 @@ const commands = [
     .setName("robloxfeuerwehr")
     .setDescription("Erstellt einen kompletten Discord für Roblox Feuerwehr RP"),
   new SlashCommandBuilder()
+    .setName("alarm")
+    .setDescription("Löst einen Feuerwehr-Einsatzalarm über die Leitstelle aus")
+    .addStringOption(o => o.setName("plz").setDescription("Postleitzahl des Einsatzortes").setRequired(true).setMaxLength(12))
+    .addStringOption(o => o.setName("stichwort").setDescription("Einsatzstichwort, z. B. B2 oder F1").setRequired(true).setMaxLength(100))
+    .addStringOption(o => o.setName("adresse").setDescription("Straße, Hausnummer und Ort").setRequired(true).setMaxLength(200))
+    .addStringOption(o => o.setName("meldebild").setDescription("Was ist passiert?").setRequired(true).setMaxLength(1000))
+    .addStringOption(o => o.setName("fahrzeuge").setDescription("Alarmierte Fahrzeuge, optional").setRequired(false).setMaxLength(500)),
+  new SlashCommandBuilder()
     .setName("website")
-    .setDescription("Erstellt eine moderne Minecraft-Server-Website als HTML-Datei"),
+    .setDescription("Erstellt eine moderne Feuerwehr- oder Minecraft-Website als HTML-Datei")
+    .addStringOption(o => o.setName("bereich").setDescription("Welche Website soll erstellt werden?").setRequired(true)
+      .addChoices({ name: "Feuerwehr / Freiburg V2", value: "feuerwehr" }, { name: "Minecraft / ProfiMine", value: "minecraft" })),
   new SlashCommandBuilder()
     .setName("plan")
     .setDescription("Erstellt einen Serverplan, ohne etwas am Server zu ändern")
