@@ -44,6 +44,16 @@ const commands = [
   new SlashCommandBuilder().setName("spieler-suchen").setDescription("Sucht einen Spieler im privaten Spielerregister")
     .addStringOption(o => o.setName("suche").setDescription("Minecraft-Name oder Discord-Name").setRequired(true).setMaxLength(64)),
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
+  new SlashCommandBuilder().setName("befehl-freigeben").setDescription("Gibt einem Mitglied einen Bot-Befehl frei oder entzieht ihn")
+    .addUserOption(o => o.setName("mitglied").setDescription("Mitglied, das den Befehl erhalten soll").setRequired(true))
+    .addStringOption(o => o.setName("befehl").setDescription("Welcher Bot-Befehl?").setRequired(true).addChoices(
+      { name: "/clear", value: "clear" }, { name: "/kick", value: "kick" }, { name: "/ban", value: "ban" },
+      { name: "/timeout", value: "timeout" }, { name: "/announce", value: "announce" }, { name: "/lock", value: "lock" },
+      { name: "/unlock", value: "unlock" }, { name: "/slowmode", value: "slowmode" }, { name: "/ticketpanel", value: "ticketpanel" },
+      { name: "/bewerbung-panel", value: "bewerbung-panel" }, { name: "/whitelist-panel", value: "whitelist-panel" }
+    ))
+    .addStringOption(o => o.setName("aktion").setDescription("Freigeben oder entziehen").setRequired(true)
+      .addChoices({ name: "Freigeben", value: "freigeben" }, { name: "Entziehen", value: "entziehen" })),
   new SlashCommandBuilder().setName("bewerbung-panel").setDescription("Veröffentlicht das Team-Bewerbungsformular"),
   new SlashCommandBuilder().setName("whitelist-panel").setDescription("Veröffentlicht das Minecraft-Whitelist-Formular"),
   new SlashCommandBuilder().setName("clear").setDescription("Löscht Nachrichten im aktuellen Kanal")
