@@ -24,7 +24,8 @@ function createMinecraftPreset() {
     { name: "Content Creator", color: "#E91E63", hoist: true, mentionable: false },
     { name: "VIP", color: "#F1C40F", hoist: true, mentionable: false },
     { name: "Mitglied", color: "#2ECC71", hoist: false, mentionable: false },
-    { name: "Neu", color: "#95A5A6", hoist: false, mentionable: false }
+    { name: "Neu", color: "#95A5A6", hoist: false, mentionable: false },
+    { name: "Bot", color: "#5865F2", hoist: false, mentionable: false }
   ];
 
   const categories = [
