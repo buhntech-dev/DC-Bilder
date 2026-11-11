@@ -455,7 +455,7 @@ client.on("interactionCreate", async interaction => {
     }
 
     if (interaction.commandName === "teamregeln-panel") {
-      if (!hasPermission(interaction, PermissionFlagsBits.ManageChannels)) {
+      if (!(await hasPermission(interaction, PermissionFlagsBits.ManageChannels))) {
         return interaction.editReply("Dir fehlt die Berechtigung Kanäle verwalten.");
       }
       await interaction.guild.channels.fetch();
@@ -489,7 +489,7 @@ client.on("interactionCreate", async interaction => {
           "**10. Vorbildfunktion:** Teammitglieder halten die Serverregeln ein und repräsentieren die Community positiv.",
           "",
           "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
-        ].join("\\n"))
+        ].join("\n"))
         .setFooter({ text: "Minecraft Community • Teamleitung" });
       const confirmRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("team_rules_confirm")
