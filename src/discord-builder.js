@@ -182,7 +182,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       if (keepCommandNames.has(channel.name.toLowerCase()) || (channel.id === options.keepChannelId || options.keepChannelIds?.includes(channel.id)) || communityKeepIds.has(channel.id)) continue;
       if (channel.type === ChannelType.GuildCategory && keepCommandCategories.has(channel.id)) continue;
       try {
-        await waitForMutationSlot("channel", 250);
+        await waitForMutationSlot("channel", options.channelMutationIntervalMs ?? 250);
         await channel.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedChannels++;
       } catch (error) {
@@ -207,7 +207,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       throwIfBuildAborted(buildSignal);
       try {
         // Maximal rund vier Rollenänderungen je fünf Sekunden statt Burst-Löschungen.
-        await waitForMutationSlot("role", 1100);
+        await waitForMutationSlot("role", options.roleMutationIntervalMs ?? 1100);
         await role.delete("Minecraft-Server wird auf Wunsch des Serverinhabers neu aufgebaut");
         created.deletedRoles++;
       } catch (error) {
