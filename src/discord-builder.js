@@ -536,4 +536,4 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   return overwrites;
 }
 
-module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites };
+module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions };
