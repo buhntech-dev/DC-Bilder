@@ -259,20 +259,20 @@ async function applyServerPlan(guild, plan, options = {}) {
   }
 
   // Der auslösende Serverinhaber erhält die Owner-Rolle automatisch.
-  const ownerRole = createdRoles.get("owner") || createdRoles.get("inhaber");
+  const ownerRoles = [createdRoles.get("owner") || createdRoles.get("inhaber"), createdRoles.get("projektinhaber")].filter(Boolean);
   const ownerIds = [...new Set([options.ownerId, ...(options.ownerIds || [])].filter(Boolean))];
-  if (ownerRole) {
-    for (const ownerId of ownerIds) {
-      try {
-        const ownerMember = await guild.members.fetch(ownerId);
+  for (const ownerId of ownerIds) {
+    try {
+      const ownerMember = await guild.members.fetch(ownerId);
+      for (const ownerRole of ownerRoles) {
         if (!ownerMember.roles.cache?.has?.(ownerRole.id)) {
           await ownerMember.roles.add(ownerRole, "Discord-Server wurde vom Inhaber aufgebaut");
         }
-      } catch (error) {
-        created.failedItems++;
-        created.errors.push("Owner-Rolle für " + ownerId + ": " + String(error.message || error));
-        console.error("[SERVER-BUILD] Owner-Rolle konnte nicht vergeben werden:", ownerId, error);
       }
+    } catch (error) {
+      created.failedItems++;
+      created.errors.push("Inhaber-Rolle für " + ownerId + ": " + String(error.message || error));
+      console.error("[SERVER-BUILD] Inhaber-Rolle konnte nicht vergeben werden:", ownerId, error);
     }
   }
 
@@ -455,8 +455,8 @@ async function applyServerPlan(guild, plan, options = {}) {
 
 function rolePermissions(name) {
   const p = PermissionFlagsBits;
-  if (["owner", "inhaber"].includes(String(name).toLowerCase())) return [p.Administrator];
-  if (["management", "teamleitung", "administrator", "senior administrator"].includes(String(name).toLowerCase())) {
+  if (["owner", "inhaber", "projektinhaber"].includes(String(name).toLowerCase())) return [p.Administrator];
+  if (["management", "teamleitung", "administrator", "senior administrator", "stellv. projektinhaber", "projektleitung", "serverleitung", "wehrleitung", "stellv. wehrleitung"].includes(String(name).toLowerCase())) {
     return [
       p.ManageChannels, p.ManageRoles, p.ManageMessages,
       p.ViewAuditLog, p.ModerateMembers, p.KickMembers, p.BanMembers
