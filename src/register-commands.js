@@ -44,6 +44,7 @@ const commands = [
   new SlashCommandBuilder().setName("spieler-suchen").setDescription("Sucht einen Spieler im privaten Spielerregister")
     .addStringOption(o => o.setName("suche").setDescription("Minecraft-Name oder Discord-Name").setRequired(true).setMaxLength(64)),
   new SlashCommandBuilder().setName("ticketpanel").setDescription("Veröffentlicht das Support-Ticket-Panel"),
+  new SlashCommandBuilder().setName("teamregeln-panel").setDescription("Entfernt das alte Teamformular und veröffentlicht die Team-Regelbestätigung"),
   new SlashCommandBuilder().setName("befehl-freigeben").setDescription("Gibt einem Mitglied einen Bot-Befehl frei oder entzieht ihn")
     .addUserOption(o => o.setName("mitglied").setDescription("Mitglied, das den Befehl erhalten soll").setRequired(true))
     .addStringOption(o => o.setName("befehl").setDescription("Welcher Bot-Befehl?").setRequired(true).addChoices(
