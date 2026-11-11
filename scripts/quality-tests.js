@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
+const { createRobloxFeuerwehrPreset } = require("../src/roblox-feuerwehr-preset");
 const { createServerPlan } = require("../src/ai");
 const { buildWebsiteHtml, escapeHtml } = require("../src/website");
 const { validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions } = require("../src/discord-builder");
@@ -29,6 +30,7 @@ async function test(name, fn) {
 (async () => {
   const mc = createMinecraftPreset();
   const pro = createProfiMinePreset();
+  const fire = createRobloxFeuerwehrPreset();
 
   await test("Bewerbungskanal-Namen werden trotz Emojis erkannt", () => {
     assert.equal(normalizeChannelName("📁・bewerbungen-team"), "bewerbungenteam");
@@ -106,6 +108,23 @@ async function test(name, fn) {
   await test("Support-Team-Kanal ist privat", () => assert.ok(mc.categories.flatMap(c => c.channels).find(c => c.name.includes("support-team")).privateToRoles.length > 0));
   await test("Team-Chat ist privat", () => assert.ok(mc.categories.flatMap(c => c.channels).find(c => c.name.includes("team-chat")).privateToRoles.length > 0));
 
+  await test("Roblox-Feuerwehr-Preset hat den Projektnamen Schritz", () => assert.equal(fire.serverName, "Schritz – Roblox Feuerwehr RP"));
+  await test("Roblox-Feuerwehr-Preset hat Projektinhaber und Stellvertretung", () => {
+    assert.ok(fire.roles.some(role => role.name === "Projektinhaber"));
+    assert.ok(fire.roles.some(role => role.name === "Stellv. Projektinhaber"));
+  });
+  await test("Roblox-Feuerwehr-Preset hat fünf Funkgruppen", () => {
+    const names = fire.categories.flatMap(category => category.channels).map(channel => channel.name);
+    for (let i = 1; i <= 5; i++) assert.ok(names.some(name => name.includes("funk-gruppe-" + i)));
+  });
+  await test("Roblox-Feuerwehr-Preset hat Leitstelle und Fuhrpark", () => {
+    const names = fire.categories.flatMap(category => category.channels).map(channel => channel.name);
+    assert.ok(names.some(name => name.includes("leitstellen-dashboard")));
+    assert.ok(names.some(name => name.includes("fahrzeugübersicht")));
+  });
+  await test("Roblox-Feuerwehr-Preset hat den richtigen Projektinhaber-Zugriff", () => {
+    assert.ok(rolePermissions("Projektinhaber").includes(PermissionFlagsBits.Administrator));
+  });
   await test("ProfiMine-Preset hat den richtigen Namen", () => assert.equal(pro.serverName, "ProfiMine Ultimate"));
   await test("ProfiMine enthält Premium-Rolle", () => assert.ok(pro.roles.some(r => r.name === "Premium")));
   await test("ProfiMine enthält MVP-Rolle", () => assert.ok(pro.roles.some(r => r.name === "MVP")));

@@ -5,6 +5,7 @@ const {
 } = require("discord.js");
 const { createServerPlan } = require("./ai");
 const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-preset");
+const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
@@ -316,12 +317,12 @@ client.on("interactionCreate", async interaction => {
 
     // /minecraft sofort quittieren, damit Discord bei der Serverplan-Erstellung
     // nicht wegen eines abgelaufenen Interaktionsfensters "Anwendung reagiert nicht" zeigt.
-    if (["minecraft", "profimine"].includes(interaction.commandName)) {
+    if (["minecraft", "profimine", "robloxfeuerwehr"].includes(interaction.commandName)) {
       try {
         if (!isOwner(interaction)) {
           return interaction.editReply("Nur der konfigurierte Besitzer darf den Minecraft-Serveraufbau starten.");
         }
-        const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : createMinecraftPreset();
+        const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : interaction.commandName === "robloxfeuerwehr" ? createRobloxFeuerwehrPreset() : createMinecraftPreset();
         // Jeder Plan bekommt eine eigene ID. Mehrere offene Vorlagen überschreiben sich nicht.
         for (const [id, saved] of pendingPlans) {
           if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
@@ -331,7 +332,7 @@ client.on("interactionCreate", async interaction => {
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
-            .setLabel("Ja – Minecraft-Server neu aufbauen")
+            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Ja – Feuerwehr-Discord neu aufbauen" : "Ja – Minecraft-Server neu aufbauen")
             .setStyle(ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
@@ -339,7 +340,9 @@ client.on("interactionCreate", async interaction => {
         return interaction.editReply({
           content: interaction.commandName === "profimine"
             ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
-            : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
+            : interaction.commandName === "robloxfeuerwehr"
+              ? "Prüfe den Roblox-Feuerwehr-Discord. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
+              : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
           embeds: [planEmbed(plan, true)], components: [row]
         });
       } catch (error) {
@@ -348,7 +351,7 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    const ownerOnly = ["build", "minecraft", "profimine", "plan", "website", "server-leeren", "backup", "backup-wiederherstellen", "papierkorb"].includes(interaction.commandName);
+    const ownerOnly = ["build", "minecraft", "profimine", "robloxfeuerwehr", "plan", "website", "server-leeren", "backup", "backup-wiederherstellen", "papierkorb"].includes(interaction.commandName);
     if (ownerOnly && !isOwner(interaction)) return interaction.editReply({ content: "Nur der konfigurierte Besitzer darf Serverstrukturen erstellen." });
     if (interaction.commandName === "backup") {
       try {
@@ -490,7 +493,7 @@ client.on("interactionCreate", async interaction => {
           "",
           "Verstöße können zu einer Verwarnung, Degradierung oder Entfernung aus dem Team führen."
         ].join("\n"))
-        .setFooter({ text: "Minecraft Community • Teamleitung" });
+        .setFooter({ text: (interaction.guild.name || "Community") + " • Teamleitung" });
       const confirmRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("team_rules_confirm")
           .setLabel("Team-Regeln bestätigen").setStyle(ButtonStyle.Success).setEmoji("✅")
@@ -679,11 +682,11 @@ client.on("interactionCreate", async interaction => {
       if (member.roles.cache.has(memberRole.id)) {
         return interaction.editReply("Du bist bereits bestätigt. Viel Spaß auf dem Server!");
       }
-      await member.roles.add(memberRole, "Minecraft-Discord: Regeln über Bestätigungsbutton akzeptiert");
+      await member.roles.add(memberRole, "Discord: Regeln über Bestätigungsbutton akzeptiert");
       await sendRuleLog(interaction.guild, "✅ **Regel akzeptiert:** " + interaction.user.tag + " (`" + interaction.user.id + "`) hat die Community-Regeln bestätigt und die Rolle **Mitglied** erhalten.");
       return interaction.editReply("✅ Erfolgreich bestätigt! Du hast jetzt die Rolle **Mitglied**. Willkommen auf dem Server!");
     } catch (error) {
-      console.error("Fehler bei Minecraft-Verifizierung:", error);
+      console.error("Fehler bei der Discord-Regelbestätigung:", error);
       return interaction.editReply("Die Bestätigung ist fehlgeschlagen. Bitte prüfe, ob der Bot **Rollen verwalten** besitzt und seine Bot-Rolle über der Rolle **Mitglied** steht.");
     }
   }
