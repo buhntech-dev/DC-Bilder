@@ -227,6 +227,31 @@ async function test(name, fn) {
   });
 
   await test("Website enthält den Servernamen", () => assert.ok(buildWebsiteHtml("Freiburg V2").includes("Freiburg V2")));
+  await test("Feuerwehr-Website verwendet eigenes Freiburg-V2-Design", () => {
+    const html = buildWebsiteHtml("Freiburg V2", { type: "feuerwehr" });
+    assert.ok(html.includes("Feuerwehr & Rettungsdienst"));
+    assert.ok(html.includes("Einsatzbereit."));
+    assert.ok(html.includes("Leitstelle & Funk"));
+    assert.ok(!html.includes("Serveradresse in Minecraft"));
+  });
+  await test("Minecraft-Website zeigt Spielmodi und Serveradresse", () => {
+    const html = buildWebsiteHtml("ProfiMine", { type: "minecraft", address: "play.example.net" });
+    assert.ok(html.includes("Survival & SMP"));
+    assert.ok(html.includes("play.example.net"));
+    assert.ok(html.includes("Minecraft Community"));
+  });
+  await test("Beide Websites enthalten responsive Navigation und mobile Styles", () => {
+    for (const type of ["feuerwehr", "minecraft"]) {
+      const html = buildWebsiteHtml("Test", { type });
+      assert.ok(html.includes('name="viewport"'));
+      assert.ok(html.includes("@media(max-width:540px)"));
+      assert.ok(html.includes('id="bereiche"'));
+    }
+  });
+  await test("Website-Discord-Link wird gegen unsichere URLs abgesichert", () => {
+    assert.equal(buildWebsiteHtml("Test", { type: "feuerwehr", discordInvite: "javascript:alert(1)" }).includes('href="javascript:'), false);
+  });
+
   await test("Website enthält responsive Viewport-Metadaten", () => assert.ok(buildWebsiteHtml().includes("width=device-width")));
   await test("Website enthält Beitrittsbereich", () => assert.ok(buildWebsiteHtml().includes('id="join"')));
   await test("Website entfernt spitze Klammern aus dem Namen", () => assert.ok(!buildWebsiteHtml("<script>alert(1)</script>").includes("<script>")));
