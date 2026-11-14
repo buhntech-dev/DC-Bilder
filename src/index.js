@@ -346,7 +346,7 @@ client.on("interactionCreate", async interaction => {
           if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
         }
         const planId = interaction.id;
-        pendingPlans.set(planId, { plan, replaceServer: false, createdAt: Date.now() });
+        pendingPlans.set(planId, { plan, replaceServer: false, renameGuild: interaction.commandName === "robloxfeuerwehr", createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`apply:${interaction.user.id}:${planId}`)
@@ -772,6 +772,15 @@ client.on("interactionCreate", async interaction => {
           else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
         }
       });
+      let renamedGuild = false;
+      if (entry.renameGuild) {
+        try {
+          await interaction.guild.setName(entry.plan.serverName, "Servername aus der Feuerwehr-Vorlage übernommen");
+          renamedGuild = true;
+        } catch (renameError) {
+          console.warn("[SERVER-BUILD] Discord-Servername konnte nicht geändert werden:", renameError.message);
+        }
+      }
       if (progressUpdater) {
         progressUpdater.complete(`Fertig: ${result.roles} Rollen, ${result.categories} Kategorien und ${result.channels} Kanäle verarbeitet.`);
       }
@@ -791,7 +800,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}${entry.renameGuild ? (renamedGuild ? "Der Discord-Servername wurde auf **" + entry.plan.serverName + "** gesetzt. " : "Der Aufbau ist fertig; den Servernamen konnte ich wegen fehlender Server-Verwalten-Berechtigung nicht ändern. ") : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
