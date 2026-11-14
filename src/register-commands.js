@@ -19,7 +19,8 @@ const commands = [
     .setDescription("Erstellt ProfiMine Ultimate mit erweitertem Minecraft-Discord"),
   new SlashCommandBuilder()
     .setName("robloxfeuerwehr")
-    .setDescription("Erstellt einen kompletten Discord für Roblox Feuerwehr RP"),
+    .setDescription("Erstellt einen kompletten Discord für Roblox Feuerwehr RP")
+    .addStringOption(option => option.setName("servername").setDescription("Name deines Feuerwehr-Servers").setRequired(true).setMaxLength(80)),
   new SlashCommandBuilder()
     .setName("website")
     .setDescription("Erstellt eine moderne Minecraft-Server-Website als HTML-Datei"),
