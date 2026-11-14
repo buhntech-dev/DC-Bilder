@@ -335,17 +335,23 @@ client.on("interactionCreate", async interaction => {
           return interaction.editReply("Nur der konfigurierte Besitzer oder der Discord-Serverinhaber darf diesen Serveraufbau starten.");
         }
         const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : interaction.commandName === "robloxfeuerwehr" ? createRobloxFeuerwehrPreset() : createMinecraftPreset();
+        if (interaction.commandName === "robloxfeuerwehr") {
+          const requestedName = interaction.options.getString("servername", true).trim();
+          if (!requestedName) return interaction.editReply("Bitte gib einen gültigen Servernamen an.");
+          plan.serverName = requestedName;
+          plan.summary = "Feuerwehr-RP-Discord für " + requestedName + " mit Wehrleitung, Leitstelle, Einsatzbetrieb, Funkgruppen, Fuhrpark, Ausbildung, Personal, Support und Protokollen.";
+        }
         // Jeder Plan bekommt eine eigene ID. Mehrere offene Vorlagen überschreiben sich nicht.
         for (const [id, saved] of pendingPlans) {
           if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
         }
         const planId = interaction.id;
-        pendingPlans.set(planId, { plan, replaceServer: true, createdAt: Date.now() });
+        pendingPlans.set(planId, { plan, replaceServer: false, createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
-            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Ja – Feuerwehr-Discord neu aufbauen" : "Ja – Minecraft-Server neu aufbauen")
-            .setStyle(ButtonStyle.Danger),
+            .setCustomId(`apply:${interaction.user.id}:${planId}`)
+            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Feuerwehr-Server jetzt erstellen" : "Ja – Minecraft-Server neu aufbauen")
+            .setStyle(interaction.commandName === "robloxfeuerwehr" ? ButtonStyle.Success : ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
@@ -353,9 +359,9 @@ client.on("interactionCreate", async interaction => {
           content: interaction.commandName === "profimine"
             ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
             : interaction.commandName === "robloxfeuerwehr"
-              ? "Prüfe den Roblox-Feuerwehr-Discord. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
+              ? "Deine Feuerwehr-Vorlage für **" + plan.serverName + "** ist vorbereitet. Klicke auf **Feuerwehr-Server jetzt erstellen**. Bestehende Kanäle und Rollen werden nicht gelöscht."
               : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
-          embeds: [planEmbed(plan, true)], components: [row]
+          embeds: [planEmbed(plan, interaction.commandName !== "robloxfeuerwehr")], components: [row]
         });
       } catch (error) {
         console.error("Fehler bei /minecraft:", error);
