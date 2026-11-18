@@ -118,9 +118,10 @@ async function handleFactionCommand(interaction) {
   if (sub === "erstellen" || sub === "entfernen") {
     if (!canManageFactions(member)) return interaction.editReply("Du brauchst Administrator-, Rollen-verwalten- oder Fraktionsleitungsrechte.");
     const name = interaction.options.getString("name", true).trim();
-    if (!/^[\\p{L}\\p{N} _-]{2,50}$/u.test(name)) return interaction.editReply("Der Fraktionsname darf 2–50 Zeichen haben und nur Buchstaben, Zahlen, Leerzeichen, _ oder - enthalten.");
+    if (!/^[\p{L}\p{N} _-]{2,50}$/u.test(name)) return interaction.editReply("Der Fraktionsname darf 2–50 Zeichen haben und nur Buchstaben, Zahlen, Leerzeichen, _ oder - enthalten.");
     await interaction.guild.roles.fetch();
-    const factionRoleName = "🏛️ | " + name;\n    const existing = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === factionRoleName.toLowerCase());
+    const factionRoleName = "🏛️ | " + name;
+    const existing = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === factionRoleName.toLowerCase());
     if (sub === "erstellen") {
       if (existing) return interaction.editReply("Diese Fraktionsrolle existiert bereits.");
       const role = await interaction.guild.roles.create({ name: factionRoleName, hoist: true, mentionable: false, reason: "Neue Fraktion durch " + interaction.user.tag });
