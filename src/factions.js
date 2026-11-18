@@ -17,15 +17,21 @@ const DEFAULT_FACTIONS = [
   { name: "Lost MC", kind: "Illegal", color: 0x424949 }
 ];
 
-function getFactionDefinitions() {
+function getFactionDefinitions(guild = null) {
+  let configured = DEFAULT_FACTIONS;
   try {
-    const configured = JSON.parse(process.env.FACTIONS_CONFIG || "null");
-    if (Array.isArray(configured) && configured.length) return configured;
+    const value = JSON.parse(process.env.FACTIONS_CONFIG || "null");
+    if (Array.isArray(value) && value.length) configured = value;
   } catch (error) {
     console.warn("[FACTIONS] FACTIONS_CONFIG ist ungültiges JSON; Standardliste wird verwendet.");
   }
-  return DEFAULT_FACTIONS;
+  const dynamic = guild ? guild.roles.cache
+    .filter(role => role.name.startsWith("🏛️ | "))
+    .map(role => ({ name: role.name.slice("🏛️ | ".length), roleName: role.name, kind: "Benutzerdefiniert", color: role.hexColor })) : [];
+  const names = new Set(configured.map(item => item.name.toLowerCase()));
+  return [...configured, ...dynamic.filter(item => !names.has(item.name.toLowerCase()))];
 }
+function roleNameFor(faction) { return faction.roleName || faction.name; }
 
 function canManageFactions(member) {
   return Boolean(member && (
@@ -37,10 +43,10 @@ function canManageFactions(member) {
 
 async function ensureFactionRoles(guild) {
   await guild.roles.fetch();
-  const definitions = getFactionDefinitions();
+  const definitions = getFactionDefinitions(guild);
   const result = [];
   for (const faction of definitions) {
-    let role = guild.roles.cache.find(item => item.name.toLowerCase() === faction.name.toLowerCase());
+    let role = guild.roles.cache.find(item => roleNameFor(item).toLowerCase() === roleNameFor(faction).toLowerCase());
     if (!role) {
       role = await guild.roles.create({
         name: faction.name,
@@ -56,11 +62,11 @@ async function ensureFactionRoles(guild) {
 }
 
 async function getFactionOverview(guild) {
-  const definitions = getFactionDefinitions();
+  const definitions = getFactionDefinitions(guild);
   await guild.roles.fetch();
   const rows = [];
   for (const faction of definitions) {
-    const role = guild.roles.cache.find(item => item.name.toLowerCase() === faction.name.toLowerCase());
+    const role = guild.roles.cache.find(item => item.name.toLowerCase() === roleNameFor(faction).toLowerCase());
     rows.push({
       name: faction.name,
       kind: faction.kind || "Weitere",
@@ -84,7 +90,7 @@ async function handleFactionCommand(interaction) {
     const factions = await ensureFactionRoles(interaction.guild);
     const selected = factions.find(item => item.name.toLowerCase() === definition.name.toLowerCase());
     const current = member.roles.cache.filter(role =>
-      getFactionDefinitions().some(item => item.name.toLowerCase() === role.name.toLowerCase()) && role.id !== selected.role.id
+      getFactionDefinitions(interaction.guild).some(item => roleNameFor(item).toLowerCase() === role.name.toLowerCase()) && role.id !== selected.role.id
     );
     if (current.size) await member.roles.remove([...current.values()], "Wechsel der Fraktion");
     if (!member.roles.cache.has(selected.role.id)) await member.roles.add(selected.role, "Fraktionsanmeldung");
@@ -92,7 +98,7 @@ async function handleFactionCommand(interaction) {
   }
   if (sub === "abmelden") {
     const current = member.roles.cache.filter(role =>
-      getFactionDefinitions().some(item => item.name.toLowerCase() === role.name.toLowerCase())
+      getFactionDefinitions(interaction.guild).some(item => roleNameFor(item).toLowerCase() === role.name.toLowerCase())
     );
     if (!current.size) return interaction.editReply("Du bist aktuell bei keiner Fraktion angemeldet.");
     await member.roles.remove([...current.values()], "Fraktionsabmeldung");
@@ -113,14 +119,14 @@ async function handleFactionCommand(interaction) {
     const name = interaction.options.getString("name", true).trim();
     if (!/^[\\p{L}\\p{N} _-]{2,50}$/u.test(name)) return interaction.editReply("Der Fraktionsname darf 2–50 Zeichen haben und nur Buchstaben, Zahlen, Leerzeichen, _ oder - enthalten.");
     await interaction.guild.roles.fetch();
-    const existing = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === name.toLowerCase());
+    const factionRoleName = "🏛️ | " + name;\n    const existing = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === factionRoleName.toLowerCase());
     if (sub === "erstellen") {
       if (existing) return interaction.editReply("Diese Fraktionsrolle existiert bereits.");
-      const role = await interaction.guild.roles.create({ name, hoist: true, mentionable: false, reason: "Neue Fraktion durch " + interaction.user.tag });
+      const role = await interaction.guild.roles.create({ name: factionRoleName, hoist: true, mentionable: false, reason: "Neue Fraktion durch " + interaction.user.tag });
       return interaction.editReply("✅ Fraktion **" + name + "** wurde erstellt (Rolle " + role + ").");
     }
     if (!existing) return interaction.editReply("Diese Fraktionsrolle wurde nicht gefunden.");
-    if (getFactionDefinitions().some(item => item.name.toLowerCase() === name.toLowerCase())) {
+    if (getFactionDefinitions(interaction.guild).some(item => item.name.toLowerCase() === name.toLowerCase() && !item.roleName)) {
       return interaction.editReply("Die Standardfraktionen können nicht über diesen Befehl gelöscht werden. Passe FACTIONS_CONFIG an.");
     }
     await existing.delete("Fraktion entfernt durch " + interaction.user.tag);
@@ -130,5 +136,5 @@ async function handleFactionCommand(interaction) {
 
 module.exports = {
   DEFAULT_FACTIONS, getFactionDefinitions, canManageFactions,
-  ensureFactionRoles, getFactionOverview, handleFactionCommand
+  ensureFactionRoles, getFactionOverview, handleFactionCommand, roleNameFor
 };
