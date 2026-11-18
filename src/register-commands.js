@@ -40,16 +40,7 @@ const commands = [
   new SlashCommandBuilder().setName("papierkorb").setDescription("Zeigt die letzten Backups und Wiederherstellungspunkte"),
   new SlashCommandBuilder().setName("fraktion").setDescription("Fraktionen anmelden, abmelden und verwalten")
     .addSubcommand(sub => sub.setName("anmelden").setDescription("Bei einer Fraktion anmelden")
-      .addStringOption(o => o.setName("fraktion").setDescription("Gewünschte Fraktion").setRequired(true)
-        .addChoices(
-          { name: "Polizei", value: "Polizei" }, { name: "Sheriff", value: "Sheriff" },
-          { name: "SASP", value: "SASP" }, { name: "Feuerwehr", value: "Feuerwehr" },
-          { name: "Rettungsdienst", value: "Rettungsdienst" }, { name: "Justiz", value: "Justiz" },
-          { name: "Regierung", value: "Regierung" }, { name: "Mechaniker", value: "Mechaniker" },
-          { name: "Taxi", value: "Taxi" }, { name: "News", value: "News" },
-          { name: "Families", value: "Families" }, { name: "Ballas", value: "Ballas" },
-          { name: "Vagos", value: "Vagos" }, { name: "Lost MC", value: "Lost MC" }
-        )))
+      .addStringOption(o => o.setName("fraktion").setDescription("Name der Fraktion (siehe /fraktion liste)").setRequired(true).setMaxLength(50)))
     .addSubcommand(sub => sub.setName("abmelden").setDescription("Aus deiner aktuellen Fraktion abmelden"))
     .addSubcommand(sub => sub.setName("liste").setDescription("Alle Fraktionen anzeigen"))
     .addSubcommand(sub => sub.setName("erstellen").setDescription("Eine eigene Fraktion erstellen")
