@@ -63,6 +63,7 @@ async function ensureFactionRoles(guild) {
 
 async function getFactionOverview(guild) {
   await guild.roles.fetch();
+  const definitions = getFactionDefinitions(guild);
   try { await guild.members.fetch(); } catch (error) { console.warn("[FACTIONS] Mitgliederliste nicht vollständig abrufbar. ENABLE_GUILD_MEMBERS prüfen:", error.message); }
   const rows = [];
   for (const faction of definitions) {
