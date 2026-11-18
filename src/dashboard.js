@@ -32,7 +32,7 @@ let currentGuild=null, guilds=[];
 const $=id=>document.getElementById(id);
 async function api(path,opts={}){const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});const d=await r.json().catch(()=>({error:'Ungültige Serverantwort'}));if(!r.ok)throw new Error(d.error||'Aktion fehlgeschlagen');return d}
 function status(id,msg){$(id).textContent=msg}
-async function init(){try{const me=await api('/api/me');$('login').classList.add('hidden');$('app').classList.remove('hidden');$('user').textContent=me.user.username+'#'+me.user.discriminator;guilds=me.guilds;$('guild-select').innerHTML=guilds.map(g=>'<option value="'+g.id+'">'+esc(g.name)+'</option>').join('');if(guilds.length)await loadGuild()}catch(e){$('login').classList.remove('hidden')}}
+async function init(){try{const me=await api('/api/me');$('login').classList.add('hidden');$('app').classList.remove('hidden');$('user').textContent=(me.user.global_name||me.user.username);guilds=me.guilds;$('guild-select').innerHTML=guilds.map(g=>'<option value="'+g.id+'">'+esc(g.name)+'</option>').join('');if(guilds.length)await loadGuild()}catch(e){$('login').classList.remove('hidden')}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function loadGuild(){currentGuild=$('guild-select').value;if(!currentGuild)return;const g=await api('/api/guild/'+currentGuild);$('guild-title').textContent=g.name;$('member-count').textContent=g.memberCount;$('role-count').textContent=g.roles.length;$('channel-count').textContent=g.channels.length;$('faction-count').textContent=g.factions.length;$('faction-select').innerHTML=g.factions.map(f=>'<option>'+esc(f.name)+'</option>').join('');$('faction-list').innerHTML='<table><thead><tr><th>Fraktion</th><th>Bereich</th><th>Anzahl</th><th>Besetzung (Leitung)</th></tr></thead><tbody>'+g.factions.map(f=>'<tr><td>'+esc(f.name)+'</td><td><span class="pill">'+esc(f.kind)+'</span></td><td>'+f.count+'</td><td>'+esc((f.members||[]).map(m=>m.displayName).slice(0,12).join(', ')||'–')+'</td></tr>').join('')+'</tbody></table>';$('channel-summary').textContent=g.channels.slice(0,35).map(c=>c.name).join(' · ')+(g.channels.length>35?' …':'');await loadBackups()}
 async function factionAction(action){try{await api('/api/guild/'+currentGuild+'/faction',{method:'POST',body:JSON.stringify({action,faction:$('faction-select').value,userId:$('faction-user').value.trim()||undefined})});status('faction-status',action==='join'?'Du bist angemeldet.':'Du bist abgemeldet.');await loadGuild()}catch(e){status('faction-status',e.message)}}
@@ -76,6 +76,9 @@ function startDashboardServer(client) {
   const redirectUri = base + "/auth/callback";
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, base);
+    if (req.method === "POST" && req.headers.origin && new URL(req.headers.origin).origin !== new URL(base).origin) {
+      return sendJson(res, 403, { error: "Ungültige Anfragequelle." });
+    }
     const cookies = parseCookies(req.headers.cookie);
     let session = sessions.get(cookies.sid);
     if (session && Date.now() - session.createdAt > SESSION_TTL) {
