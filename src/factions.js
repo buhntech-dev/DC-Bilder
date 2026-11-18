@@ -46,7 +46,7 @@ async function ensureFactionRoles(guild) {
   const definitions = getFactionDefinitions(guild);
   const result = [];
   for (const faction of definitions) {
-    let role = guild.roles.cache.find(item => roleNameFor(item).toLowerCase() === roleNameFor(faction).toLowerCase());
+    let role = guild.roles.cache.find(item => item.name.toLowerCase() === roleNameFor(faction).toLowerCase());
     if (!role) {
       role = await guild.roles.create({
         name: faction.name,
@@ -62,8 +62,8 @@ async function ensureFactionRoles(guild) {
 }
 
 async function getFactionOverview(guild) {
-  const definitions = getFactionDefinitions(guild);
   await guild.roles.fetch();
+  try { await guild.members.fetch(); } catch (error) { console.warn("[FACTIONS] Mitgliederliste nicht vollständig abrufbar. ENABLE_GUILD_MEMBERS prüfen:", error.message); }
   const rows = [];
   for (const faction of definitions) {
     const role = guild.roles.cache.find(item => item.name.toLowerCase() === roleNameFor(faction).toLowerCase());
@@ -85,7 +85,7 @@ async function handleFactionCommand(interaction) {
   const member = await interaction.guild.members.fetch(interaction.user.id);
   if (sub === "anmelden") {
     const factionName = interaction.options.getString("fraktion", true);
-    const definition = getFactionDefinitions().find(item => item.name.toLowerCase() === factionName.toLowerCase());
+    const definition = getFactionDefinitions(interaction.guild).find(item => item.name.toLowerCase() === factionName.toLowerCase());
     if (!definition) return interaction.editReply("Diese Fraktion gibt es nicht. Nutze /fraktion liste.");
     const factions = await ensureFactionRoles(interaction.guild);
     const selected = factions.find(item => item.name.toLowerCase() === definition.name.toLowerCase());
