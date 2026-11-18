@@ -15,6 +15,8 @@ const { createPromotionRequest, handlePromotionInteraction } = require("./team-p
 const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
 const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
 const { createProgressChannel, createProgressUpdater } = require("./progress-channel");
+const { handleFactionCommand } = require("./factions");
+const { startDashboardServer } = require("./dashboard");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -169,6 +171,7 @@ async function openTicket(interaction, typeKey = "support") {
 
 client.once("clientReady", async () => {
   console.log(`Kostenloser Discord Server Builder online als ${client.user.tag}`);
+  startDashboardServer(client);
   for (const guild of client.guilds.cache.values()) {
     try {
       const botRole = guild.roles.cache.find(role => role.name.toLowerCase() === "bot");
@@ -366,6 +369,19 @@ client.on("interactionCreate", async interaction => {
       } catch (error) {
         console.error("Fehler bei /minecraft:", error);
         return interaction.editReply("Fehler bei /minecraft: " + String(error.message || error).slice(0, 700));
+      }
+    }
+
+    if (interaction.commandName === "dashboard") {
+      const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\\/$/, "");
+      if (!base) return interaction.editReply("Das Dashboard ist noch nicht konfiguriert. Bitte PUBLIC_BASE_URL, CLIENT_ID und DISCORD_CLIENT_SECRET in Railway setzen.");
+      return interaction.editReply("🌐 **Dein Control Center:** " + base + "\\nMelde dich dort mit Discord an. Du benötigst Server-Verwaltungsrechte.");
+    }
+    if (interaction.commandName === "fraktion") {
+      try { return await handleFactionCommand(interaction); }
+      catch (error) {
+        console.error("[FACTIONS] Befehl fehlgeschlagen:", error);
+        return interaction.editReply("Fraktionsaktion fehlgeschlagen: " + String(error.message || error).slice(0, 500));
       }
     }
 
