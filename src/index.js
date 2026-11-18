@@ -15,6 +15,7 @@ const { createPromotionRequest, handlePromotionInteraction } = require("./team-p
 const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
 const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
 const { createProgressChannel, createProgressUpdater } = require("./progress-channel");
+const { createFractionApiServer } = require("./fraction-api");
 
 for (const key of ["DISCORD_TOKEN", "OWNER_ID"]) {
   if (!process.env[key]) {
@@ -819,4 +820,5 @@ client.on("interactionCreate", async interaction => {
   }
 });
  
+createFractionApiServer(client);
 client.login(process.env.DISCORD_TOKEN);
