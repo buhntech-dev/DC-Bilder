@@ -154,7 +154,7 @@ function startDashboardServer(client) {
         if (req.method === "POST") {
           const body = await readBody(req);
           if (action === "faction") {
-            const faction = getFactionDefinitions().find(f => f.name.toLowerCase() === String(body.faction || "").toLowerCase());
+            const faction = getFactionDefinitions(guild).find(f => f.name.toLowerCase() === String(body.faction || "").toLowerCase());
             if (!faction) return sendJson(res, 400, { error: "Unbekannte Fraktion." });
             const targetId = body.userId || session.user.id;
             if (targetId !== session.user.id && !canManageFactions(actor)) return sendJson(res, 403, { error: "Nur die Fraktionsleitung darf andere Mitglieder zuweisen." });
