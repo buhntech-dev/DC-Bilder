@@ -21,7 +21,7 @@ return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="v
 <div id="app" class="shell hidden"><header class="top"><div class="brand">FREIBURG <span>V2</span> · CONTROL CENTER</div><div class="user"><span id="user"></span> · <a href="/auth/logout">Abmelden</a></div></header>
 <section class="hero"><div class="eyebrow">Serververwaltung · Live-Übersicht</div><h1 id="guild-title">Dein Discord auf einen Blick.</h1><p>Fraktionen, Mitglieder, Sicherungen und Vorlagen zentral verwalten.</p><div class="row"><select id="guild-select"></select><button class="secondary" onclick="loadGuild()">Server laden</button></div></section>
 <div class="grid section"><article class="card"><div class="muted">Mitglieder</div><div class="stat" id="member-count">–</div></article><article class="card"><div class="muted">Rollen</div><div class="stat" id="role-count">–</div></article><article class="card"><div class="muted">Kanäle</div><div class="stat" id="channel-count">–</div></article><article class="card"><div class="muted">Fraktionen</div><div class="stat" id="faction-count">–</div></article></div>
-<section class="grid section"><article class="card"><h2>🏛️ Fraktionen</h2><p class="muted">Anmelden, abmelden und Besetzung ansehen.</p><div class="row"><select id="faction-select"></select><button onclick="factionAction('join')">Anmelden</button><button class="secondary" onclick="factionAction('leave')">Abmelden</button></div><div id="faction-list" class="section"></div><div id="faction-status" class="status"></div></article>
+<section class="grid section"><article class="card"><h2>🏛️ Fraktionen</h2><p class="muted">Anmelden, abmelden und Besetzung ansehen.</p><div class="row"><select id="faction-select"></select><button onclick="factionAction('join')">Anmelden</button><button class="secondary" onclick="factionAction('leave')">Abmelden</button></div><div class="row" style="margin-top:12px"><input id="faction-user" placeholder="Discord-ID (optional, Leitung)" maxlength="20"><input id="new-faction" placeholder="Neue Fraktion" maxlength="50"><button class="secondary" onclick="createFaction()">Fraktion erstellen</button></div><div id="faction-list" class="section"></div><div id="faction-status" class="status"></div></article>
 <article class="card"><h2>🗄️ Sicherungen</h2><p class="muted">Struktur-Backup erstellen oder einen Wiederherstellungspunkt laden.</p><button onclick="makeBackup()">Jetzt sichern</button><div id="backup-list" class="section"></div><div id="backup-status" class="status"></div></article>
 <article class="card"><h2>🚒 Feuerwehr-Vorlage</h2><p class="muted">Erstellt Rollen, Funk, Leitstelle, Einsatzbetrieb und Teamstruktur. Vorhandene Kanäle und Rollen bleiben bestehen.</p><input id="fire-name" placeholder="Name deiner Feuerwehr" maxlength="80"><button class="wide" onclick="buildTemplate('feuerwehr')">Feuerwehr-Server erstellen</button><div id="build-status" class="status"></div></article>
 <article class="card"><h2>🧱 Weitere Vorlagen</h2><p class="muted">Minecraft und ProfiMine als Serverstruktur aufbauen.</p><div class="row"><button class="secondary" onclick="buildTemplate('minecraft')">Minecraft</button><button class="secondary" onclick="buildTemplate('profimine')">ProfiMine</button></div><div class="muted" style="margin-top:12px">Diese Vorlagen können bestehende Serverstrukturen ersetzen. Vorher wird eine Sicherung empfohlen.</div></article></section>
@@ -35,7 +35,8 @@ function status(id,msg){$(id).textContent=msg}
 async function init(){try{const me=await api('/api/me');$('login').classList.add('hidden');$('app').classList.remove('hidden');$('user').textContent=me.user.username+'#'+me.user.discriminator;guilds=me.guilds;$('guild-select').innerHTML=guilds.map(g=>'<option value="'+g.id+'">'+esc(g.name)+'</option>').join('');if(guilds.length)await loadGuild()}catch(e){$('login').classList.remove('hidden')}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function loadGuild(){currentGuild=$('guild-select').value;if(!currentGuild)return;const g=await api('/api/guild/'+currentGuild);$('guild-title').textContent=g.name;$('member-count').textContent=g.memberCount;$('role-count').textContent=g.roles.length;$('channel-count').textContent=g.channels.length;$('faction-count').textContent=g.factions.length;$('faction-select').innerHTML=g.factions.map(f=>'<option>'+esc(f.name)+'</option>').join('');$('faction-list').innerHTML='<table><thead><tr><th>Fraktion</th><th>Bereich</th><th>Mitglieder</th></tr></thead><tbody>'+g.factions.map(f=>'<tr><td>'+esc(f.name)+'</td><td><span class="pill">'+esc(f.kind)+'</span></td><td>'+f.count+'</td></tr>').join('')+'</tbody></table>';$('channel-summary').textContent=g.channels.slice(0,35).map(c=>c.name).join(' · ')+(g.channels.length>35?' …':'');await loadBackups()}
-async function factionAction(action){try{await api('/api/guild/'+currentGuild+'/faction',{method:'POST',body:JSON.stringify({action,faction:$('faction-select').value})});status('faction-status',action==='join'?'Du bist angemeldet.':'Du bist abgemeldet.');await loadGuild()}catch(e){status('faction-status',e.message)}}
+async function factionAction(action){try{await api('/api/guild/'+currentGuild+'/faction',{method:'POST',body:JSON.stringify({action,faction:$('faction-select').value,userId:$('faction-user').value.trim()||undefined})});status('faction-status',action==='join'?'Du bist angemeldet.':'Du bist abgemeldet.');await loadGuild()}catch(e){status('faction-status',e.message)}}
+async function createFaction(){try{const name=$('new-faction').value.trim();if(!name)throw new Error('Bitte einen Fraktionsnamen eingeben.');await api('/api/guild/'+currentGuild+'/faction-create',{method:'POST',body:JSON.stringify({name})});status('faction-status','Fraktion '+name+' wurde erstellt.');$('new-faction').value='';await loadGuild()}catch(e){status('faction-status',e.message)}}
 async function makeBackup(){try{const d=await api('/api/guild/'+currentGuild+'/backup',{method:'POST',body:'{}'});status('backup-status','Backup erstellt · ID '+d.messageId);await loadBackups()}catch(e){status('backup-status',e.message)}}
 async function loadBackups(){try{const d=await api('/api/guild/'+currentGuild+'/backups');$('backup-list').innerHTML=d.backups.map(b=>'<div class="row" style="justify-content:space-between;margin:8px 0"><span>'+esc(b.createdAt)+'<br><small class="muted">'+esc(b.summary)+'</small></span><button class="secondary" onclick="restoreBackup(\''+b.id+'\')">Wiederherstellen</button></div>').join('')||'<p class="muted">Noch keine Sicherungen.</p>'}catch(e){status('backup-status',e.message)}}
 async function restoreBackup(id){if(!confirm('Backup laden? Fehlende Rollen und Kanäle werden ergänzt; vorhandene bleiben bestehen.'))return;try{const d=await api('/api/guild/'+currentGuild+'/restore',{method:'POST',body:JSON.stringify({backupId:id})});status('backup-status','Wiederhergestellt: '+d.rolesCreated+' Rollen, '+d.categoriesCreated+' Kategorien, '+d.channelsCreated+' Kanäle.');await loadGuild()}catch(e){status('backup-status',e.message)}}
@@ -169,6 +170,27 @@ function startDashboardServer(client) {
               if (otherRoles.size) await target.roles.remove([...otherRoles.values()], "Fraktionswechsel über Dashboard");
               if (!target.roles.cache.has(selected.role.id)) await target.roles.add(selected.role, "Fraktionsanmeldung über Dashboard");
             }
+            return sendJson(res, 200, { ok: true });
+          }
+          if (action === "faction-create") {
+            if (!canManageFactions(actor)) return sendJson(res, 403, { error: "Nur Fraktionsleitung oder Serververwaltung darf Fraktionen erstellen." });
+            const name = String(body.name || "").trim();
+            if (!/^[\p{L}\p{N} _-]{2,50}$/u.test(name)) return sendJson(res, 400, { error: "Ungültiger Name (2–50 Zeichen)." });
+            await guild.roles.fetch();
+            const roleName = "🏛️ | " + name;
+            if (guild.roles.cache.some(role => role.name.toLowerCase() === roleName.toLowerCase()) ||
+                getFactionDefinitions(guild).some(f => f.name.toLowerCase() === name.toLowerCase())) {
+              return sendJson(res, 409, { error: "Diese Fraktion existiert bereits." });
+            }
+            await guild.roles.create({ name: roleName, hoist: true, mentionable: false, reason: "Fraktion über Dashboard durch " + session.user.username });
+            return sendJson(res, 200, { ok: true });
+          }
+          if (action === "faction-delete") {
+            if (!canManageFactions(actor)) return sendJson(res, 403, { error: "Nur Fraktionsleitung oder Serververwaltung darf Fraktionen entfernen." });
+            const name = String(body.name || "").trim();
+            const role = guild.roles.cache.find(item => item.name === "🏛️ | " + name);
+            if (!role) return sendJson(res, 404, { error: "Benutzerdefinierte Fraktion nicht gefunden." });
+            await role.delete("Fraktion über Dashboard entfernt durch " + session.user.username);
             return sendJson(res, 200, { ok: true });
           }
           if (action === "backup") {
