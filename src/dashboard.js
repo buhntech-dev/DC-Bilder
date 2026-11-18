@@ -129,14 +129,14 @@ function startDashboardServer(client) {
         const r = await fetch("https://discord.com/api/v10/users/@me/guilds", { headers: { authorization: "Bearer " + session.accessToken } });
         const all = await r.json();
         if (!r.ok) return sendJson(res, 401, { error: "Discord-Serverliste konnte nicht geladen werden." });
-        return sendJson(res, 200, { user: session.user, guilds: all.filter(hasManageGuild).map(g => ({ id: g.id, name: g.name })) });
+        return sendJson(res, 200, { user: session.user, guilds: all.filter(g => client.guilds.cache.has(g.id)).map(g => ({ id: g.id, name: g.name })) });
       }
       const match = url.pathname.match(/^\/api\/guild\/(\d+)(?:\/(.*))?$/);
       if (match) {
         const guildId = match[1], action = match[2] || "";
         const access = await fetch("https://discord.com/api/v10/users/@me/guilds", { headers: { authorization: "Bearer " + session.accessToken } });
         const userGuilds = await access.json();
-        const guildInfo = userGuilds.find(g => g.id === guildId && hasManageGuild(g));
+        const guildInfo = userGuilds.find(g => g.id === guildId);
         if (!guildInfo) return sendJson(res, 403, { error: "Du hast keine Verwaltungsrechte für diesen Discord-Server." });
         const guild = client.guilds.cache.get(guildId);
         if (!guild) return sendJson(res, 404, { error: "Der Bot ist auf diesem Server nicht online oder nicht eingeladen." });
@@ -147,8 +147,8 @@ function startDashboardServer(client) {
           const factions = await getFactionOverview(guild);
           return sendJson(res, 200, {
             name: guild.name, memberCount: guild.memberCount, roles: guild.roles.cache.map(r => r.name),
-            channels: guild.channels.cache.map(c => ({ name: c.name, type: c.type })),
-            factions
+            channels: guild.channels.cache.filter(c => c.permissionsFor(actor)?.has("ViewChannel")).map(c => ({ name: c.name, type: c.type })),
+            factions: factions.map(({ name, kind, count }) => ({ name, kind, count }))
           });
         }
         if (req.method === "POST") {
@@ -228,6 +228,7 @@ function startDashboardServer(client) {
           }
         }
         if (req.method === "GET" && action === "backups") {
+          if (!canManageFactions(actor)) return sendJson(res, 403, { error: "Nur Fraktionsleitung oder Serververwaltung darf Backups einsehen." });
           const backups = await listBackups(guild, 10);
           return sendJson(res, 200, { backups: backups.map(b => ({ id: b.id, createdAt: b.createdAt.toLocaleString("de-DE", { timeZone: "Europe/Berlin" }), summary: b.summary })) });
         }
