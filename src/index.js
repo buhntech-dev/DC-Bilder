@@ -379,9 +379,9 @@ client.on("interactionCreate", async interaction => {
     }
 
     if (interaction.commandName === "dashboard") {
-      const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\\/$/, "");
+      const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
       if (!base) return interaction.editReply("Das Dashboard ist noch nicht konfiguriert. Bitte PUBLIC_BASE_URL, CLIENT_ID und DISCORD_CLIENT_SECRET in Railway setzen.");
-      return interaction.editReply("🌐 **Dein Control Center:** " + base + "\\nMelde dich dort mit Discord an. Du benötigst Server-Verwaltungsrechte.");
+      return interaction.editReply("🌐 **Dein Control Center:** " + base + "\nMelde dich dort mit Discord an. Du benötigst Server-Verwaltungsrechte.");
     }
     if (interaction.commandName === "fraktion") {
       try { return await handleFactionCommand(interaction); }
