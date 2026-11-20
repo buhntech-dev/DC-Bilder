@@ -234,7 +234,7 @@ function createProfiMinePreset() {
     cat("💎 PREMIUM & BELOHNUNGEN", [
       ch("💎・premium-information", "Premium-Ränge, Vorteile und Bedingungen"),
       ch("🎁・premium-belohnungen", "Informationen zu freigeschalteten Belohnungen"),
-      ch("💬・premium-chat", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
+      ch("💬・premium-lounge", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
       ch("👑・legend-lounge", "Bereich für Legend und Netzwerkleitung", ["Legend", "Netzwerkleitung", "Owner"]),
       ch("🎟️・giveaways", "Offizielle Gewinnspiele und Teilnahmebedingungen"),
       ch("🏅・erfolge-und-abzeichen", "Community-Erfolge und besondere Auszeichnungen")
