@@ -140,6 +140,14 @@ function createProfiMinePreset() {
     { name: "Moderator in Ausbildung", color: "#5DADE2", hoist: true, mentionable: false },
     { name: "Support in Ausbildung", color: "#48C9B0", hoist: true, mentionable: false },
     { name: "Event-Leitung", color: "#17A589", hoist: true, mentionable: false },
+    { name: "Event-Team", color: "#148F77", hoist: true, mentionable: false },
+    { name: "Premium", color: "#F1C40F", hoist: true, mentionable: false },
+    { name: "MVP", color: "#D4AC0D", hoist: true, mentionable: false },
+    { name: "Elite", color: "#AF7AC5", hoist: true, mentionable: false },
+    { name: "Legend", color: "#C0392B", hoist: true, mentionable: false },
+    { name: "Creator", color: "#E91E63", hoist: true, mentionable: false },
+    { name: "Partner", color: "#138D75", hoist: true, mentionable: false },
+    { name: "Builder+", color: "#2874A6", hoist: true, mentionable: false },
     { name: "Media-Team", color: "#D98880", hoist: true, mentionable: false },
     { name: "Partner+", color: "#138D75", hoist: true, mentionable: false },
     { name: "YouTube", color: "#E74C3C", hoist: true, mentionable: false },
@@ -169,7 +177,7 @@ function createProfiMinePreset() {
       ch("📌・wichtige-links", "Website, Shop, Wiki, Karte und weitere offizielle Links")
     ]),
     cat("🏡 SURVIVAL & SMP", [
-      ch("🌲・survival-chat", "Allgemeiner Chat für Survival und SMP"),
+      ch("🌲・smp-chat", "Allgemeiner Chat für Survival und SMP"),
       ch("🏠・base-vorstellungen", "Zeige deine Base und deine Bauprojekte"),
       ch("🧭・abenteuer-und-tipps", "Tipps, Fortschritt und gemeinsame Abenteuer"),
       ch("⛏️・minen-und-farmen", "Mining, Farmen und Ressourcen"),
@@ -191,7 +199,7 @@ function createProfiMinePreset() {
     cat("🎮 MINIGAMES & ARCADES", [
       ch("🎮・minigames-chat", "Alles rund um Minigames"),
       ch("🛏️・bedwars", "Teams, Taktiken und Mitspielersuche für BedWars"),
-      ch("🏹・skywars", "SkyWars-Taktiken und Gruppen"),
+      ch("🏹・skywars-arena", "SkyWars-Taktiken und Gruppen"),
       ch("🧨・tntrun-und-party", "Partyspiele und kurze Matches"),
       ch("🏁・parkour", "Parkour-Strecken, Rekorde und Tipps"),
       ch("🎯・duelle", "Verabrede faire Duelle"),
@@ -226,7 +234,7 @@ function createProfiMinePreset() {
     cat("💎 PREMIUM & BELOHNUNGEN", [
       ch("💎・premium-information", "Premium-Ränge, Vorteile und Bedingungen"),
       ch("🎁・premium-belohnungen", "Informationen zu freigeschalteten Belohnungen"),
-      ch("💬・premium-chat", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
+      ch("💬・premium-lounge", "Exklusiver Austausch für Premium-Ränge", ["Premium", "MVP", "Elite", "Legend"]),
       ch("👑・legend-lounge", "Bereich für Legend und Netzwerkleitung", ["Legend", "Netzwerkleitung", "Owner"]),
       ch("🎟️・giveaways", "Offizielle Gewinnspiele und Teilnahmebedingungen"),
       ch("🏅・erfolge-und-abzeichen", "Community-Erfolge und besondere Auszeichnungen")

@@ -238,7 +238,7 @@ async function applyServerPlan(guild, plan, options = {}) {
       const permissions = rolePermissions(name);
       await reportProgress("Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ": **" + name + "** …", index === 0);
       console.log("[SERVER-BUILD] Erstelle Rolle " + (index + 1) + "/" + plan.roles.length + ":", name);
-      await waitForMutationSlot("role", 1100);
+      await waitForMutationSlot("role", options.roleMutationIntervalMs ?? 1100);
       // Erst die Rolle sicher anlegen, danach Berechtigungen separat setzen.
       // So kann ein fehlerhaftes Permission-Feld nicht den gesamten Serveraufbau stoppen.
       const createdRole = await guild.roles.create({
@@ -330,7 +330,7 @@ async function applyServerPlan(guild, plan, options = {}) {
     await reportProgress("Erstelle Kategorie " + categoryIndex + "/" + plan.categories.length + ": **" + cleanName(category.name, "Kategorie") + "** …");
     let parent;
     try {
-      await waitForMutationSlot("channel", 250);
+      await waitForMutationSlot("channel", options.channelMutationIntervalMs ?? 250);
       parent = await guild.channels.create({
         name: cleanName(category.name, "Kategorie"),
         type: ChannelType.GuildCategory,
@@ -358,7 +358,7 @@ async function applyServerPlan(guild, plan, options = {}) {
         reason: "Discord Server Builder – vom Serverinhaber bestätigt"
       };
       if (type === ChannelType.GuildText && channel.topic) channelOptions.topic = String(channel.topic).slice(0, 1024);
-      await waitForMutationSlot("channel", 250);
+      await waitForMutationSlot("channel", options.channelMutationIntervalMs ?? 250);
       const createdChannel = await guild.channels.create(channelOptions);
       created.channels++;
 

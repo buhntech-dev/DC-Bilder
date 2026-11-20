@@ -335,17 +335,23 @@ client.on("interactionCreate", async interaction => {
           return interaction.editReply("Nur der konfigurierte Besitzer oder der Discord-Serverinhaber darf diesen Serveraufbau starten.");
         }
         const plan = interaction.commandName === "profimine" ? createProfiMinePreset() : interaction.commandName === "robloxfeuerwehr" ? createRobloxFeuerwehrPreset() : createMinecraftPreset();
+        if (interaction.commandName === "robloxfeuerwehr") {
+          const requestedName = interaction.options.getString("servername", true).trim();
+          if (!requestedName) return interaction.editReply("Bitte gib einen gültigen Servernamen an.");
+          plan.serverName = requestedName;
+          plan.summary = "Feuerwehr-RP-Discord für " + requestedName + " mit Wehrleitung, Leitstelle, Einsatzbetrieb, Funkgruppen, Fuhrpark, Ausbildung, Personal, Support und Protokollen.";
+        }
         // Jeder Plan bekommt eine eigene ID. Mehrere offene Vorlagen überschreiben sich nicht.
         for (const [id, saved] of pendingPlans) {
           if (Date.now() - saved.createdAt > 15 * 60 * 1000) pendingPlans.delete(id);
         }
         const planId = interaction.id;
-        pendingPlans.set(planId, { plan, replaceServer: true, createdAt: Date.now() });
+        pendingPlans.set(planId, { plan, replaceServer: false, renameGuild: interaction.commandName === "robloxfeuerwehr", createdAt: Date.now() });
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`finalreplace:${interaction.user.id}:${planId}`)
-            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Ja – Feuerwehr-Discord neu aufbauen" : "Ja – Minecraft-Server neu aufbauen")
-            .setStyle(ButtonStyle.Danger),
+            .setCustomId(`apply:${interaction.user.id}:${planId}`)
+            .setLabel(interaction.commandName === "robloxfeuerwehr" ? "Feuerwehr-Server jetzt erstellen" : "Ja – Minecraft-Server neu aufbauen")
+            .setStyle(interaction.commandName === "robloxfeuerwehr" ? ButtonStyle.Success : ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
             .setLabel("Abbrechen").setStyle(ButtonStyle.Secondary)
         );
@@ -353,9 +359,9 @@ client.on("interactionCreate", async interaction => {
           content: interaction.commandName === "profimine"
             ? "Prüfe ProfiMine Ultimate. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
             : interaction.commandName === "robloxfeuerwehr"
-              ? "Prüfe den Roblox-Feuerwehr-Discord. Mit dem roten Button bestätigst du den vollständigen Neuaufbau."
+              ? "Deine Feuerwehr-Vorlage für **" + plan.serverName + "** ist vorbereitet. Klicke auf **Feuerwehr-Server jetzt erstellen**. Bestehende Kanäle und Rollen werden nicht gelöscht."
               : "Prüfe den Minecraft-Aufbau. Mit dem roten Button bestätigst du den vollständigen Neuaufbau.",
-          embeds: [planEmbed(plan, true)], components: [row]
+          embeds: [planEmbed(plan, interaction.commandName !== "robloxfeuerwehr")], components: [row]
         });
       } catch (error) {
         console.error("Fehler bei /minecraft:", error);
@@ -662,9 +668,12 @@ client.on("interactionCreate", async interaction => {
       }
       const planId = interaction.id;
       pendingPlans.set(planId, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
+      const confirmationCustomId = (isMinecraft || isProfiMine)
+        ? `finalreplace:${interaction.user.id}:${planId}`
+        : `apply:${interaction.user.id}:${planId}`;
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}:${planId}`)
+          .setCustomId(confirmationCustomId)
           .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
           .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
@@ -766,6 +775,15 @@ client.on("interactionCreate", async interaction => {
           else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
         }
       });
+      let renamedGuild = false;
+      if (entry.renameGuild) {
+        try {
+          await interaction.guild.setName(entry.plan.serverName, "Servername aus der Feuerwehr-Vorlage übernommen");
+          renamedGuild = true;
+        } catch (renameError) {
+          console.warn("[SERVER-BUILD] Discord-Servername konnte nicht geändert werden:", renameError.message);
+        }
+      }
       if (progressUpdater) {
         progressUpdater.complete(`Fertig: ${result.roles} Rollen, ${result.categories} Kategorien und ${result.channels} Kanäle verarbeitet.`);
       }
@@ -785,7 +803,7 @@ client.on("interactionCreate", async interaction => {
       try { await joinSupportVoice(client, interaction.guild); }
       catch (voiceError) { console.warn("Support-Voice konnte nicht betreten werden:", voiceError.message); }
       await interaction.followUp({
-        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
+        content: `Fertig! Erstellt: **${result.roles} Rollen**, **${result.categories} Kategorien** und **${result.channels} Kanäle**.\nFehlgeschlagene Elemente: **${result.failedItems}**. Gelöscht: **${result.deletedChannels} Kanäle** und **${result.deletedRoles} Rollen**. Übersprungen/nicht löschbar: **${result.skippedRoles} Rollen**, fehlgeschlagene Kanal-Löschungen: **${result.failedDeletes}**.\n${result.errors.length ? "Fehlerdetails: " + result.errors.slice(0, 5).join(" | ").slice(0, 900) + (result.errors.length > 5 ? " | weitere Fehler im Railway-Log" : "") + "\n" : ""}${entry.renameGuild ? (renamedGuild ? "Der Discord-Servername wurde auf **" + entry.plan.serverName + "** gesetzt. " : "Der Aufbau ist fertig; den Servernamen konnte ich wegen fehlender Server-Verwalten-Berechtigung nicht ändern. ") : ""}Der Befehlskanal wurde für diese Rückmeldung beibehalten. Der Owner erhält automatisch Zugriff auf alle neu erstellten Kanäle. Prüfe, dass die Bot-Rolle über den verwalteten Rollen steht.`,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {

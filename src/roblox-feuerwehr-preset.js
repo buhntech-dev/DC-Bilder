@@ -21,6 +21,12 @@ function createRobloxFeuerwehrPreset() {
     { name: "Einsatzleitung", color: "#C0392B", hoist: true, mentionable: false },
     { name: "Feuerwehr", color: "#E74C3C", hoist: true, mentionable: false },
     { name: "Fahrzeugführer", color: "#D4AC0D", hoist: true, mentionable: false },
+    { name: "Maschinist", color: "#B7950B", hoist: true, mentionable: false },
+    { name: "Atemschutzgeräteträger", color: "#C0392B", hoist: true, mentionable: false },
+    { name: "Notfallsanitäter", color: "#16A085", hoist: true, mentionable: false },
+    { name: "Rettungsdienst", color: "#1ABC9C", hoist: true, mentionable: false },
+    { name: "Pressesprecher", color: "#5D6D7E", hoist: true, mentionable: false },
+    { name: "Gefahrgut", color: "#7D6608", hoist: true, mentionable: false },
     { name: "Jugendfeuerwehr", color: "#F4D03F", hoist: true, mentionable: false },
     { name: "Anwärter", color: "#7F8C8D", hoist: true, mentionable: false },
     { name: "Ehrenmitglied", color: "#AF7AC5", hoist: true, mentionable: false },
@@ -32,7 +38,7 @@ function createRobloxFeuerwehrPreset() {
   const management = ["Owner", "Projektinhaber", "Stellv. Projektinhaber", "Projektleitung", "Serverleitung", "Wehrleitung", "Stellv. Wehrleitung"];
   const leaders = [...management, "Zugführer", "Gruppenführer"];
   const fireTeam = [...leaders, "Ausbilder", "Leitstellenleitung", "Disponent", "Einsatzleitung", "Feuerwehr", "Fahrzeugführer"];
-  const operations = [...leaders, "Ausbilder", "Leitstellenleitung", "Disponent", "Einsatzleitung", "Feuerwehr"];
+  const operations = [...leaders, "Ausbilder", "Leitstellenleitung", "Disponent", "Einsatzleitung", "Feuerwehr", "Rettungsdienst", "Notfallsanitäter", "Maschinist", "Atemschutzgeräteträger", "Gefahrgut"];
   const categories = [
     cat("📌 START & INFORMATIONEN", [
       ch("👋・willkommen", "Willkommen bei der Roblox Feuerwehr RP Community."),
@@ -49,6 +55,10 @@ function createRobloxFeuerwehrPreset() {
       ch("📣・dienstmeldungen", "Dienstmeldungen und wichtige Hinweise", fireTeam),
       ch("🧑‍🚒・personal", "Personalübersicht und Zuständigkeiten", leaders),
       ch("📝・ausbildung", "Ausbildungsunterlagen und Lehrgänge", fireTeam),
+      ch("🧯・atemschutz", "Atemschutzunterlagen, Belastungsübungen und Geräteträger", ["Atemschutzgeräteträger", ...leaders]),
+      ch("🚒・maschinisten", "Maschinistenausbildung und Fahrzeugkunde", ["Maschinist", "Fahrzeugführer", ...leaders]),
+      ch("🗓️・übungsplanung", "Planung und Auswertung von Einsatzübungen", fireTeam),
+      ch("📑・dienstanweisungen", "Dienstanweisungen und SOPs der Feuerwehr", leaders),
       ch("🎓・prüfungen", "Prüfungstermine und Ergebnisse", leaders),
       ch("📨・bewerbung", "Bewerbung für die Feuerwehr"),
       ch("🗂️・personalakten", "Interne Personalakten", management)
@@ -70,12 +80,18 @@ function createRobloxFeuerwehrPreset() {
       ch("🗺️・einsatzkarte", "Einsatzorte, Kartenlinks und Lagebilder", operations),
       ch("📟・rückmeldungen", "Rückmeldungen der alarmierten Kräfte", operations),
       ch("🧾・einsatzberichte", "Abgeschlossene Einsätze und Einsatzberichte", leaders),
+      ch("🧭・einsatzdokumentation", "Lage, Maßnahmen, Kräfteübersicht und Abschlussdokumentation", operations),
+      ch("📋・einsatzstichworte", "Stichwortkatalog und Alarmierungsinformationen", [...management, "Leitstellenleitung", "Disponent"]),
+      ch("🚑・rettungsdienst", "Rettungsdienstliche Lagemeldungen und Übergaben", ["Rettungsdienst", "Notfallsanitäter", ...leaders]),
+      ch("⚠️・gefahrgut-lagen", "Gefahrgut- und ABC-Einsatzinformationen", ["Gefahrgut", ...operations]),
       ch("🔊・leitstelle-besprechung", "Besprechungsraum für Leitstelle", [...management, "Leitstellenleitung", "Disponent"], "voice"),
       ch("🔊・einsatz-besprechung", "Lagebesprechung vor und während Einsätzen", operations, "voice")
     ]),
     cat("🚒 FAHRZEUGE & GERÄTE", [
       ch("🚒・fahrzeugübersicht", "Übersicht der verfügbaren Roblox-Einsatzfahrzeuge"),
       ch("🚒・fahrzeug-zuweisung", "Fahrzeugbesatzungen und Zuweisungen", fireTeam),
+      ch("🧑‍🚒・besatzungen", "Fahrzeugbesatzungen, Funktionen und Status", fireTeam),
+      ch("🛠️・werkstatt", "Werkstattaufträge und Instandhaltung", leaders),
       ch("🧰・fahrzeug-beladung", "Fahrzeugbeladung und Ausrüstung", fireTeam),
       ch("🔧・fahrzeug-mängel", "Schäden und technische Mängel melden", fireTeam),
       ch("🅿️・fuhrpark", "Interne Fuhrparkverwaltung", leaders),
@@ -126,7 +142,7 @@ function createRobloxFeuerwehrPreset() {
 
   return {
     serverName: "Schritz – Roblox Feuerwehr RP",
-    summary: "Kompletter Discord-Aufbau für eine Roblox-Feuerwehr-RP-Community mit Projektinhaber, Wehrleitung, Abteilungen, fünf Funkgruppen, Leitstelle, Einsatzbetrieb, Fuhrpark, Support, Teamverwaltung und Protokollen.",
+    summary: "Erweiterte Feuerwehr-RP-Struktur mit Wehrleitung, Leitstelle, Einsatzleitung, Disposition, Funkgruppen, Atemschutz, Maschinisten, Rettungsdienst, Gefahrgut, Ausbildung, Fuhrpark, Support und revisionsfähigen Protokollbereichen.",
     roles,
     categories
   };
