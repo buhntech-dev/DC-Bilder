@@ -38,6 +38,16 @@ const commands = [
   new SlashCommandBuilder().setName("backup-wiederherstellen").setDescription("Stellt fehlende Rollen und Kanäle aus einem Backup wieder her")
     .addStringOption(o => o.setName("backup_id").setDescription("Nachrichten-ID des Backups aus #backup-archiv").setRequired(true)),
   new SlashCommandBuilder().setName("papierkorb").setDescription("Zeigt die letzten Backups und Wiederherstellungspunkte"),
+  new SlashCommandBuilder().setName("fraktion").setDescription("Fraktionen anmelden, abmelden und verwalten")
+    .addSubcommand(sub => sub.setName("anmelden").setDescription("Bei einer Fraktion anmelden")
+      .addStringOption(o => o.setName("fraktion").setDescription("Name der Fraktion (siehe /fraktion liste)").setRequired(true).setMaxLength(50)))
+    .addSubcommand(sub => sub.setName("abmelden").setDescription("Aus deiner aktuellen Fraktion abmelden"))
+    .addSubcommand(sub => sub.setName("liste").setDescription("Alle Fraktionen anzeigen"))
+    .addSubcommand(sub => sub.setName("erstellen").setDescription("Eine eigene Fraktion erstellen")
+      .addStringOption(o => o.setName("name").setDescription("Name der Fraktion").setRequired(true).setMaxLength(50)))
+    .addSubcommand(sub => sub.setName("entfernen").setDescription("Eine eigene Fraktion entfernen")
+      .addStringOption(o => o.setName("name").setDescription("Name der Fraktion").setRequired(true).setMaxLength(50))),
+  new SlashCommandBuilder().setName("dashboard").setDescription("Öffnet das zentrale Web-Dashboard"),
   new SlashCommandBuilder().setName("serverstatus").setDescription("Zeigt den aktuellen Minecraft-Serverstatus"),
   new SlashCommandBuilder().setName("beforderung").setDescription("Beantragt eine Team-Beförderung mit Freigabe")
     .addUserOption(o => o.setName("mitglied").setDescription("Teammitglied").setRequired(true))

@@ -14,12 +14,17 @@ if (failed) process.exit(1);
 
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
 const { createRobloxFeuerwehrPreset } = require("../src/roblox-feuerwehr-preset");
-for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()], ["RobloxFeuerwehr", createRobloxFeuerwehrPreset()]]) {
+const { PRESETS } = require("../src/extra-presets");
+for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()], ["RobloxFeuerwehr", createRobloxFeuerwehrPreset()], ...Object.entries(PRESETS).map(([name, factory]) => [name, factory()])]) {
   if (!Array.isArray(preset.roles) || !Array.isArray(preset.categories)) throw new Error(name + ": Rollen/Kategorien fehlen.");
   const roleNames = preset.roles.map(role => String(role.name).toLowerCase());
   if (new Set(roleNames).size !== roleNames.length) throw new Error(name + ": doppelte Rollennamen.");
   if (preset.categories.some(category => !Array.isArray(category.channels) || category.channels.length > 50)) throw new Error(name + ": ungültige Kategorie/Kanallimit.");
   const channels = preset.categories.flatMap(category => category.channels);
+  const roleSet = new Set(roleNames);
+  for (const channel of channels) for (const roleName of channel.privateToRoles || []) {
+    if (!roleSet.has(String(roleName).toLowerCase())) throw new Error(name + ": Kanal verweist auf unbekannte Rolle " + roleName + ".");
+  }
   if (preset.roles.length > 250 || preset.categories.length + channels.length > 500) throw new Error(name + ": Discord-Limit überschritten.");
   if (!preset.roles.some(role => role.name === "Owner")) throw new Error(name + ": Owner-Rolle fehlt.");
   if (name === "Minecraft" && !preset.roles.some(role => role.name === "Test Support")) throw new Error("Minecraft: Test Support-Rolle fehlt.");
@@ -116,6 +121,7 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
   await testBuilderAgainstMockGuild("Minecraft", createMinecraftPreset);
   await testBuilderAgainstMockGuild("ProfiMine", createProfiMinePreset);
   await testBuilderAgainstMockGuild("RobloxFeuerwehr", createRobloxFeuerwehrPreset);
+  for (const [name, factory] of Object.entries(PRESETS)) await testBuilderAgainstMockGuild(name, factory);
 })().catch(error => {
   console.error("Builder-Integrationstest fehlgeschlagen:", error);
   process.exitCode = 1;
