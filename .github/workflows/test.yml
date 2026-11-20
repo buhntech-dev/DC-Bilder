@@ -2,7 +2,7 @@ name: Discord Bot Quality Checks
 
 on:
   push:
-    branches: [main, "rewrite/complete-v2"]
+    branches: [main, "rewrite/complete-v2", "feature/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
