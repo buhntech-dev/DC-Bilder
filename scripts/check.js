@@ -21,6 +21,10 @@ for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMin
   if (new Set(roleNames).size !== roleNames.length) throw new Error(name + ": doppelte Rollennamen.");
   if (preset.categories.some(category => !Array.isArray(category.channels) || category.channels.length > 50)) throw new Error(name + ": ungültige Kategorie/Kanallimit.");
   const channels = preset.categories.flatMap(category => category.channels);
+  const roleSet = new Set(roleNames);
+  for (const channel of channels) for (const roleName of channel.privateToRoles || []) {
+    if (!roleSet.has(String(roleName).toLowerCase())) throw new Error(name + ": Kanal verweist auf unbekannte Rolle " + roleName + ".");
+  }
   if (preset.roles.length > 250 || preset.categories.length + channels.length > 500) throw new Error(name + ": Discord-Limit überschritten.");
   if (!preset.roles.some(role => role.name === "Owner")) throw new Error(name + ": Owner-Rolle fehlt.");
   if (name === "Minecraft" && !preset.roles.some(role => role.name === "Test Support")) throw new Error("Minecraft: Test Support-Rolle fehlt.");
