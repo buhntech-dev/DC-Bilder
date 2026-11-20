@@ -141,7 +141,7 @@ function createRobloxFeuerwehrPreset() {
   ];
 
   return {
-    serverName: "Feuerwehr RP",
+    serverName: "Schritz – Roblox Feuerwehr RP",
     summary: "Erweiterte Feuerwehr-RP-Struktur mit Wehrleitung, Leitstelle, Einsatzleitung, Disposition, Funkgruppen, Atemschutz, Maschinisten, Rettungsdienst, Gefahrgut, Ausbildung, Fuhrpark, Support und revisionsfähigen Protokollbereichen.",
     roles,
     categories
