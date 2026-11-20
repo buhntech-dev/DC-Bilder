@@ -185,6 +185,8 @@ function startDashboardServer(client) {
         }
         if (req.method === "GET" && action === "audit-log") {
           if (!actor.permissions.has(PermissionFlagsBits.ViewAuditLog) && !actor.permissions.has(PermissionFlagsBits.Administrator) && actor.id !== guild.ownerId) return sendJson(res, 403, { error: "Dir fehlt Serverprotokoll ansehen." });
+          const botMember = await guild.members.fetchMe();
+          if (!botMember.permissions.has(PermissionFlagsBits.ViewAuditLog)) return sendJson(res, 403, { error: "Dem Bot fehlt Serverprotokoll ansehen." });
           const audit = await guild.fetchAuditLogs({ limit: 25 });
           return sendJson(res, 200, { entries: [...audit.entries.values()].map(entry => ({
             action: String(entry.action), target: entry.target?.tag || entry.target?.name || entry.target?.id || "–",
@@ -194,6 +196,8 @@ function startDashboardServer(client) {
         }
         if (req.method === "GET" && action === "bans") {
           if (!actor.permissions.has(PermissionFlagsBits.BanMembers) && !actor.permissions.has(PermissionFlagsBits.Administrator) && actor.id !== guild.ownerId) return sendJson(res, 403, { error: "Dir fehlt Mitglieder bannen." });
+          const botMember = await guild.members.fetchMe();
+          if (!botMember.permissions.has(PermissionFlagsBits.BanMembers)) return sendJson(res, 403, { error: "Dem Bot fehlt Mitglieder bannen." });
           const bans = await guild.bans.fetch({ limit: 100 });
           return sendJson(res, 200, { bans: [...bans.values()].map(ban => ({ id: ban.user.id, tag: ban.user.tag })) });
         }
@@ -210,12 +214,15 @@ function startDashboardServer(client) {
             const name = String(body.name || "").trim(), description = String(body.description || "").trim();
             if (name.length < 2 || name.length > 100) return sendJson(res, 400, { error: "Der Servername muss 2–100 Zeichen lang sein." });
             if (description.length > 120) return sendJson(res, 400, { error: "Die Beschreibung darf höchstens 120 Zeichen lang sein." });
+            const botMember = await guild.members.fetchMe();
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageGuild)) return sendJson(res, 403, { error: "Dem Bot fehlt Server verwalten." });
             await guild.edit({ name, description: description || null }, "Servereinstellungen über Dashboard durch " + session.user.username);
             return sendJson(res, 200, { message: "Servereinstellungen gespeichert." });
           }
           if (action === "role-create" || action === "role-update" || action === "role-delete") {
             if (!actor.permissions.has(PermissionFlagsBits.ManageRoles) && !actor.permissions.has(PermissionFlagsBits.Administrator) && actor.id !== guild.ownerId) return sendJson(res, 403, { error: "Dir fehlt Rollen verwalten." });
             const botMember = await guild.members.fetchMe();
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) return sendJson(res, 403, { error: "Dem Bot fehlt Rollen verwalten." });
             const roleId = String(body.roleId || "");
             const role = roleId ? await guild.roles.fetch(roleId).catch(() => null) : null;
             if (action !== "role-create" && (!role || role.id === guild.id || role.managed || !role.editable || role.comparePositionTo(botMember.roles.highest) >= 0 || (actor.id !== guild.ownerId && role.comparePositionTo(actor.roles.highest) >= 0))) {
@@ -234,6 +241,8 @@ function startDashboardServer(client) {
           }
           if (action === "channel-create" || action === "channel-update" || action === "channel-delete") {
             if (!actor.permissions.has(PermissionFlagsBits.ManageChannels) && !actor.permissions.has(PermissionFlagsBits.Administrator) && actor.id !== guild.ownerId) return sendJson(res, 403, { error: "Dir fehlt Kanäle verwalten." });
+            const botMember = await guild.members.fetchMe();
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageChannels)) return sendJson(res, 403, { error: "Dem Bot fehlt Kanäle verwalten." });
             const channelId = String(body.channelId || "");
             const channel = channelId ? await guild.channels.fetch(channelId).catch(() => null) : null;
             if (action !== "channel-create" && !channel) return sendJson(res, 404, { error: "Kanal nicht gefunden." });
@@ -299,6 +308,8 @@ function startDashboardServer(client) {
             const reason = String(body.reason || "Dashboard-Aktion durch " + session.user.username).slice(0, 500);
             if (kind === "unban") {
               if (!actor.permissions.has(PermissionFlagsBits.BanMembers)) return sendJson(res, 403, { error: "Dir fehlt Mitglieder bannen." });
+              const botMember = await guild.members.fetchMe();
+              if (!botMember.permissions.has(PermissionFlagsBits.BanMembers)) return sendJson(res, 403, { error: "Dem Bot fehlt Mitglieder bannen." });
               const userId = String(body.userId || "");
               if (!/^\d{17,20}$/.test(userId)) return sendJson(res, 400, { error: "Bitte eine gültige Discord-Mitglieds-ID angeben." });
               await guild.bans.remove(userId, reason);
