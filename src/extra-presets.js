@@ -56,7 +56,7 @@ const PRESETS = {
     ["💬 COMMUNITY",[["💬・chat","Allgemeiner Austausch"],["🤝・vorstellungen","Stelle dich vor"],["💡・vorschläge","Ideen und Feedback"],["📊・umfragen","Community-Abstimmungen"],["🤝・partnerschaften","Partner und Kooperationen"]]],
     ["🎉 EVENTS",[["📅・event-kalender","Termine und Veranstaltungen"],["📝・event-anmeldung","Teilnahme an Events"],["🏆・ergebnisse","Ergebnisse und Gewinner"],["🎙️・event-talk","Event-Sprachkanal",[],"voice"]]],
     ["📸 MEDIEN",[["📸・bilder","Bilder und Fotos"],["🎬・videos","Videos und Clips"],["🎨・kreativ","Kreative Arbeiten"],["📣・social-media","Social-Media-Links"]]],
-    ["🎫 HILFE",[["🎫・support","Support und Tickets"],["🐞・fehler","Fehler melden"],["⚠️・meldungen","Verstöße melden"],["🔒・team-support","Interner Support",["Moderator","Administrator"]]]]],
+    ["🎫 HILFE",[["🎫・support","Support und Tickets"],["🐞・fehler","Fehler melden"],["⚠️・meldungen","Verstöße melden"],["🔒・team-support","Interner Support",["Moderator","Administrator"]]]],
     ["🛡️ TEAM",[["💬・team-chat","Teamkommunikation",["Management","Administrator","Moderator"]],["📋・aufgaben","Teamaufgaben",["Management","Administrator"]],["📜・moderation-logs","Moderationsprotokolle",["Management","Administrator"]]]]
   ]),
   school: () => makePreset("Schulserver", "Schul-Discord mit Klassen, Unterricht, Lernmaterial, Aufgaben, Schülervertretung und geschütztem Lehrerzimmer.", [
