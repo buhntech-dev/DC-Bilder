@@ -25,7 +25,10 @@ return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="v
 <div id="login" class="login card hidden"><div class="brand">BILDER<span>-BOT</span> · CONTROL CENTER</div><h1>Dein Server. Eine Zentrale.</h1><p class="muted">Melde dich sicher mit Discord an. Zugriff erhalten nur Mitglieder mit Server-Verwaltungsrechten.</p><a href="/auth/login">Mit Discord anmelden</a></div>
 <div id="app" class="shell hidden"><header class="top"><div class="brand">BILDER<span>-BOT</span> · CONTROL CENTER</div><div class="user"><span id="user"></span> · <a href="/auth/logout">Abmelden</a></div></header>
 <section class="hero"><div class="eyebrow">Discord automation suite · Control Center</div><h1 id="guild-title">Dein Discord. Alles unter Kontrolle.</h1><p>Verwalte Community, Rollen, Kanäle, Mitglieder, Vorlagen und Automationen an einem Ort.</p><div class="row"><select id="guild-select"></select><button class="secondary" onclick="loadGuild()">Server laden</button></div></section>
-<div class="grid section"><article class="card"><div class="muted">Mitglieder</div><div class="stat" id="member-count">–</div></article><article class="card"><div class="muted">Rollen</div><div class="stat" id="role-count">–</div></article><article class="card"><div class="muted">Kanäle</div><div class="stat" id="channel-count">–</div></article><article class="card"><div class="muted">Fraktionen</div><div class="stat" id="faction-count">–</div></article></div>
+<nav class="dash-nav" aria-label="Dashboard-Bereiche">
+<button class="dash-tab active" data-filter="all">⌂ Übersicht</button><button class="dash-tab" data-filter="community">✦ Community</button><button class="dash-tab" data-filter="server">▦ Server & Vorlagen</button><button class="dash-tab" data-filter="moderation">🛡 Moderation</button><button class="dash-tab" data-filter="system">⚙ Verwaltung</button>
+</nav>
+<div class="dash-intro"><div><span class="eyebrow">Verwaltung</span><h2 id="section-heading">Alle Funktionen</h2></div><span class="pill">● Live-Verbindung zum Bot</span></div><div class="grid section"><article class="card"><div class="muted">Mitglieder</div><div class="stat" id="member-count">–</div></article><article class="card"><div class="muted">Rollen</div><div class="stat" id="role-count">–</div></article><article class="card"><div class="muted">Kanäle</div><div class="stat" id="channel-count">–</div></article><article class="card"><div class="muted">Fraktionen</div><div class="stat" id="faction-count">–</div></article></div>
 <section class="grid section"><article class="card"><h2>🏛️ Fraktionen</h2><p class="muted">Anmelden, abmelden und Besetzung ansehen.</p><div class="row"><select id="faction-select"></select><button onclick="factionAction('join')">Anmelden</button><button class="secondary" onclick="factionAction('leave')">Abmelden</button></div><div class="row" style="margin-top:12px"><input id="faction-user" placeholder="Discord-ID (optional, Leitung)" maxlength="20"><input id="new-faction" placeholder="Neue Fraktion" maxlength="50"><button class="secondary" onclick="createFaction()">Fraktion erstellen</button><button class="secondary" onclick="deleteFaction()">Fraktion löschen</button></div><div id="faction-list" class="section"></div><div id="faction-status" class="status"></div></article>
 <article class="card"><h2>🗄️ Sicherungen</h2><p class="muted">Struktur-Backup erstellen oder einen Wiederherstellungspunkt laden.</p><button onclick="makeBackup()">Jetzt sichern</button><div id="backup-list" class="section"></div><div id="backup-status" class="status"></div></article>
 <article class="card"><h2>🚒 Feuerwehr-Vorlage</h2><p class="muted">Erstellt Rollen, Funk, Leitstelle, Einsatzbetrieb und Teamstruktur. Vorhandene Kanäle und Rollen bleiben bestehen.</p><input id="fire-name" placeholder="Name deiner Feuerwehr" maxlength="80"><button class="wide" onclick="buildTemplate('feuerwehr')">Feuerwehr-Server erstellen</button><div id="build-status" class="status"></div></article>
@@ -40,6 +43,22 @@ return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="v
 <div class="muted">Dashboard-Aktionen werden mit deinem Discord-Konto geprüft. Der Bot benötigt die passenden Discord-Berechtigungen.</div></div>
 <script>
 let currentGuild=null, guilds=[];
+const dashGroups={
+community:['Fraktionen','Willkommenssystem','Panels veröffentlichen'],
+server:['Feuerwehr-Vorlage','Minecraft-Status','Weitere Vorlagen','Vorlagenbibliothek'],
+moderation:['Moderation & Ankündigungen','Bannliste','Mitgliederverwaltung'],
+system:['Sicherungen','Servereinstellungen','Rollenverwaltung','Kanalverwaltung','Audit-Log']
+};
+function setDashFilter(filter){
+ document.querySelectorAll('.dash-tab').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
+ const names=filter==='all'?null:dashGroups[filter]||[];
+ document.querySelectorAll('.grid.section article.card').forEach(card=>{
+  const h=card.querySelector('h2')?.textContent||'';
+  card.classList.toggle('dash-hidden',!!names&&!names.some(n=>h.includes(n)));
+ });
+ $('section-heading').textContent=({all:'Alle Funktionen',community:'Community & Mitglieder',server:'Server & Vorlagen',moderation:'Moderation & Sicherheit',system:'Verwaltung & Protokolle'})[filter]||'Alle Funktionen';
+}
+document.addEventListener('click',e=>{const b=e.target.closest('.dash-tab');if(b)setDashFilter(b.dataset.filter)});
 const $=id=>document.getElementById(id);
 async function api(path,opts={}){const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});const d=await r.json().catch(()=>({error:'Ungültige Serverantwort'}));if(!r.ok)throw new Error(d.error||'Aktion fehlgeschlagen');return d}
 function status(id,msg){$(id).textContent=msg}
