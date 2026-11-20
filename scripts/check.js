@@ -14,7 +14,8 @@ if (failed) process.exit(1);
 
 const { createMinecraftPreset, createProfiMinePreset } = require("../src/minecraft-preset");
 const { createRobloxFeuerwehrPreset } = require("../src/roblox-feuerwehr-preset");
-for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()], ["RobloxFeuerwehr", createRobloxFeuerwehrPreset()]]) {
+const { PRESETS } = require("../src/extra-presets");
+for (const [name, preset] of [["Minecraft", createMinecraftPreset()], ["ProfiMine", createProfiMinePreset()], ["RobloxFeuerwehr", createRobloxFeuerwehrPreset()], ...Object.entries(PRESETS).map(([name, factory]) => [name, factory()])]) {
   if (!Array.isArray(preset.roles) || !Array.isArray(preset.categories)) throw new Error(name + ": Rollen/Kategorien fehlen.");
   const roleNames = preset.roles.map(role => String(role.name).toLowerCase());
   if (new Set(roleNames).size !== roleNames.length) throw new Error(name + ": doppelte Rollennamen.");
@@ -116,6 +117,7 @@ async function testBuilderAgainstMockGuild(presetName, presetFactory) {
   await testBuilderAgainstMockGuild("Minecraft", createMinecraftPreset);
   await testBuilderAgainstMockGuild("ProfiMine", createProfiMinePreset);
   await testBuilderAgainstMockGuild("RobloxFeuerwehr", createRobloxFeuerwehrPreset);
+  for (const [name, factory] of Object.entries(PRESETS)) await testBuilderAgainstMockGuild(name, factory);
 })().catch(error => {
   console.error("Builder-Integrationstest fehlgeschlagen:", error);
   process.exitCode = 1;
