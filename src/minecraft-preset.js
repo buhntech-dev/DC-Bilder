@@ -140,6 +140,7 @@ function createProfiMinePreset() {
     { name: "Moderator in Ausbildung", color: "#5DADE2", hoist: true, mentionable: false },
     { name: "Support in Ausbildung", color: "#48C9B0", hoist: true, mentionable: false },
     { name: "Event-Leitung", color: "#17A589", hoist: true, mentionable: false },
+    { name: "Event-Team", color: "#148F77", hoist: true, mentionable: false },
     { name: "Media-Team", color: "#D98880", hoist: true, mentionable: false },
     { name: "Partner+", color: "#138D75", hoist: true, mentionable: false },
     { name: "YouTube", color: "#E74C3C", hoist: true, mentionable: false },
