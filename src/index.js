@@ -15,6 +15,7 @@ const { createPromotionRequest, handlePromotionInteraction } = require("./team-p
 const { createGuildBackup, listBackups, restoreGuildBackup, backupListEmbed, startWeeklyBackups } = require("./backups");
 const { canManagePlayerRegistry, registerPlayer, searchRegisteredPlayers } = require("./player-registry");
 const { createProgressChannel, createProgressUpdater } = require("./progress-channel");
+const { handleWelcomeMember } = require("./welcome");
 const { handleFactionCommand } = require("./factions");
 const { startDashboardServer } = require("./dashboard");
 
@@ -206,6 +207,11 @@ if (String(process.env.ENABLE_GUILD_MEMBERS || "false").toLowerCase() === "true"
     }
   });
 }
+
+client.on("guildMemberAdd", async member => {
+  try { await handleWelcomeMember(member); }
+  catch (error) { console.warn("[WELCOME] Begrüßung fehlgeschlagen:", error.message); }
+});
 
 client.on("interactionCreate", async interaction => {
   try {
