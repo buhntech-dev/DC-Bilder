@@ -11,6 +11,8 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 - `/plan prompt`: zeigt nur einen Plan, ohne Änderungen
 - `/website`: erstellt eine responsive HTML-Website als Datei im aktuellen Kanal
 - `/dashboard`: öffnet das zentrale, Discord-OAuth-geschützte Web-Dashboard mit Serverübersicht, Fraktionsanmeldung/-abmeldung und Besetzung, Fraktionsverwaltung, Backups, Vorlagen-Aufbau, Minecraft-Status, Moderation sowie Support-/Bewerbungs-/Whitelist-Panels
+- Das Dashboard enthält ein konfigurierbares Willkommenssystem mit Kanalwahl, Nachrichtenvorlage und Platzhaltern (`{user}`, `{username}`, `{server}`, `{memberCount}`, `{id}`).
+- Vorlagenbibliothek im Dashboard: Minecraft, ProfiMine, Roblox-Feuerwehr sowie Polizei-RP, Rettungsdienst-RP, FiveM, Gaming, Community, Schule und Support-Center.
 - `/fraktion anmelden`: meldet ein Mitglied bei einer Fraktion an (pro Mitglied nur eine Fraktion)
 - `/fraktion abmelden`: meldet ein Mitglied aus seiner Fraktion ab
 - `/fraktion liste`: zeigt Fraktionen und Mitgliederzahlen
