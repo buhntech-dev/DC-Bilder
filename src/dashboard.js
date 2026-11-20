@@ -53,7 +53,7 @@ system:['Sicherungen','Servereinstellungen','Rollenverwaltung','Kanalverwaltung'
 function setDashFilter(filter){
  document.querySelectorAll('.dash-tab').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
  const names=filter==='all'?null:dashGroups[filter]||[];
- document.querySelectorAll('.grid.section article.card').forEach(card=>{
+ document.querySelectorAll('section.grid.section article.card').forEach(card=>{
   const h=card.querySelector('h2')?.textContent||'';
   card.classList.toggle('dash-hidden',!!names&&!names.some(n=>h.includes(n)));
  });
