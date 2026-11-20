@@ -668,9 +668,12 @@ client.on("interactionCreate", async interaction => {
       }
       const planId = interaction.id;
       pendingPlans.set(planId, { plan, replaceServer: isMinecraft || isProfiMine, createdAt: Date.now() });
+      const confirmationCustomId = (isMinecraft || isProfiMine)
+        ? `finalreplace:${interaction.user.id}:${planId}`
+        : `apply:${interaction.user.id}:${planId}`;
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${(isMinecraft || isProfiMine) ? "finalreplace" : "apply"}:${interaction.user.id}:${planId}`)
+          .setCustomId(confirmationCustomId)
           .setLabel((isMinecraft || isProfiMine) ? "Kompletten Neuaufbau bestätigen" : "Server jetzt erstellen")
           .setStyle((isMinecraft || isProfiMine) ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`cancel:${interaction.user.id}:${planId}`)
