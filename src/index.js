@@ -9,6 +9,7 @@ const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
+const { handleSupportVoiceStateUpdate, handleSupportWaitingInteraction } = require("./support-waiting");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
@@ -221,7 +222,7 @@ client.on("interactionCreate", async interaction => {
       !interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   }
-  if (await handleApplicationInteraction(interaction)) return;
+  if (await handleSupportWaitingInteraction(interaction)) return;\n  if (await handleApplicationInteraction(interaction)) return;
   if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
