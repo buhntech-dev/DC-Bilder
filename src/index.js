@@ -228,7 +228,6 @@ client.on("interactionCreate", async interaction => {
       !interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   }
-  if (await handleSupportWaitingInteraction(interaction)) return;
   if (await handleApplicationInteraction(interaction)) return;
   if (await handlePromotionInteraction(interaction)) return;
 
