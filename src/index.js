@@ -7,7 +7,7 @@ const { createServerPlan } = require("./ai");
 const { createMinecraftPreset, createProfiMinePreset } = require("./minecraft-preset");
 const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
-const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
+const { applyServerPlan, resetActiveBuilds, cancelActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
 const { handleSupportVoiceStateUpdate, ensureSupportInfrastructure } = require("./support-waiting");
 const { handleApplicationInteraction, panelRow } = require("./applications");
@@ -48,7 +48,7 @@ client.rest.on("rateLimited", rateLimit => {
   }));
 });
 const pendingPlans = new Map();
-const buildAbortController = new AbortController();
+// /abbrechen nutzt cancelActiveBuilds() und setzt den Build-Zustand zurück.
 
 // Beim Start alle übrig gebliebenen In-Process-Sperren entfernen.
 const clearedBuildLocks = resetActiveBuilds();
@@ -61,7 +61,7 @@ function stopActiveBuilds(signalName) {
   if (isShuttingDown) return;
   isShuttingDown = true;
   console.warn("[BOT] " + signalName + " empfangen – laufender Serveraufbau wird abgebrochen.");
-  buildAbortController.abort();
+  cancelActiveBuilds();
   try { client.destroy(); } catch (error) {
     console.warn("[BOT] Discord-Verbindung konnte nicht sauber geschlossen werden:", error.message);
   }
@@ -227,6 +227,21 @@ client.on("interactionCreate", async interaction => {
   if (interaction.isChatInputCommand() && interaction.inGuild() &&
       !interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  }
+  if (interaction.isChatInputCommand() && interaction.commandName === "abbrechen") {
+    if (!isOwner(interaction)) {
+      return interaction.editReply("⛔ Nur der konfigurierte Bot-Owner darf den Not-Aus ausführen.");
+    }
+    const clearedPlans = pendingPlans.size;
+    pendingPlans.clear();
+    const stoppedBuilds = cancelActiveBuilds();
+    return interaction.editReply(
+      "🛑 **Not-Aus ausgeführt.**\n" +
+      "• Laufende Serveraufbauten abgebrochen: **" + stoppedBuilds + "**\n" +
+      "• Offene Serverpläne/Bestätigungen verworfen: **" + clearedPlans + "**\n" +
+      "• Warteschlangen und Bot-Buildzustand zurückgesetzt.\n\n" +
+      "Bereits von Discord ausgeführte Änderungen bleiben bestehen."
+    );
   }
   if (await handleApplicationInteraction(interaction)) return;
   if (await handlePromotionInteraction(interaction)) return;
@@ -798,7 +813,7 @@ client.on("interactionCreate", async interaction => {
         // sind an diesen Kanal gebunden und schlagen sonst mit Unknown Channel (10003) fehl.
         keepChannelId: interaction.channelId,
         keepChannelIds: progressChannel ? [progressChannel.id] : [],
-        signal: buildAbortController.signal,
+        // Globale Abbrüche werden direkt über cancelActiveBuilds() verarbeitet.
         onProgress: message => {
           if (progressUpdater) progressUpdater.update(message);
           else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
