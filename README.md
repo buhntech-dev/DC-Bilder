@@ -23,7 +23,7 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 - Team-Beförderungen über `/beforderung` mit Freigabe durch Owner, Management oder Teamleitung und Rangfolge bis Senior Administrator
 - Minecraft-Status über `/serverstatus` und automatische Aktualisierung alle 30 Sekunden (Adresse über `MINECRAFT_ADDRESS` konfigurierbar)
 - Manuelle Backups über `/backup`, wöchentliche Sicherung Montag 10:00 Uhr (Europe/Berlin), Übersicht über `/papierkorb` und Wiederherstellung über `/backup-wiederherstellen`
-- Support-Sprachkanal mit automatisch erzeugtem kurzem Signalton; Bot benötigt Kanal ansehen, verbinden und sprechen
+- Support-Warteraum: Bei Voice-Beitritt wird das Support-Team im Textkanal benachrichtigt. Supporter holen das Mitglied per Button in ihren eigenen Sprachkanal; es gibt keine automatische Verschiebung.\n- Support-Sprachkanal mit automatisch erzeugtem kurzem Signalton; Bot benötigt Kanal ansehen, verbinden und sprechen
 - Whitelist-Anträge mit Formular, Annahme/Ablehnung, Discord-Nickname auf Minecraft-Namen und Rolle `Mitglied`
 - Interner Whitelist-Prüfkanal sowie Team-Rangstufen bis Senior Administrator
 
@@ -42,7 +42,7 @@ In Railway unter Variables setzen:
 - `DISCORD_CLIENT_SECRET`: OAuth2 Client Secret aus dem Discord Developer Portal (nur Railway-Variable)
 - `PUBLIC_BASE_URL`: öffentliche HTTPS-Adresse des Railway-Webdienstes, z. B. `https://dein-bot.up.railway.app` (OAuth Redirect URI muss `PUBLIC_BASE_URL/auth/callback` sein)
 - optional `FACTIONS_CONFIG`: JSON-Array mit eigenen Fraktionsdefinitionen (Name, Bereich und Farbe)
-- optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll
+- optional `SUPPORT_VOICE_CHANNEL_ID`: Sprachkanal-ID, in dem der Bot erreichbar bleiben soll\n- optional `SUPPORT_WAITING_CHANNEL_ID`: ID des Support-Warteraums (empfohlen; alternativ erkennt der Bot einen Sprachkanal mit „support-warteraum“ oder „warte-raum“ im Namen)\n- optional `SUPPORT_NOTIFY_CHANNEL_ID`: Textkanal-ID für die Support-Benachrichtigungen (ohne Angabe sucht der Bot einen Textkanal mit „support“, „team-chat“ oder „moderation“ im Namen)\n- optional `SUPPORT_ROLE_ID`: ID der Support-Rolle, die bei neuen Wartenden erwähnt wird; ohne Angabe sucht der Bot passende Rollen anhand ihres Namens
 - optional `MINECRAFT_ADDRESS`: Minecraft-Adresse für Statusabfragen (Standard: `Communety.aternos.me:18884`)
 - optional `RCON_HOST`, `RCON_PORT`, `RCON_PASSWORD`: nur für Server mit aktivierter RCON-Schnittstelle; Passwort ausschließlich als Railway-Variable setzen
 - optional `DISCORD_INVITE_URL`: gültiger Discord-Einladungslink für die generierte Website
