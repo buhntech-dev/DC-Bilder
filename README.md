@@ -23,7 +23,7 @@ Der Bot erstellt Discord-Serverstrukturen direkt über die Discord-API. Es wird 
 - Team-Beförderungen über `/beforderung` mit Freigabe durch Owner, Management oder Teamleitung und Rangfolge bis Senior Administrator
 - Minecraft-Status über `/serverstatus` und automatische Aktualisierung alle 30 Sekunden (Adresse über `MINECRAFT_ADDRESS` konfigurierbar)
 - Manuelle Backups über `/backup`, wöchentliche Sicherung Montag 10:00 Uhr (Europe/Berlin), Übersicht über `/papierkorb` und Wiederherstellung über `/backup-wiederherstellen`
-- Support-Warteraum: Bei Voice-Beitritt wird das Support-Team im Textkanal benachrichtigt. Supporter holen das Mitglied per Button in ihren eigenen Sprachkanal; es gibt keine automatische Verschiebung.\n- Support-Sprachkanal mit automatisch erzeugtem kurzem Signalton; Bot benötigt Kanal ansehen, verbinden und sprechen
+- Automatisches Support-System bei jedem Serveraufbau und beim Bot-Start: Kategorie `🎫 SUPPORT`, Rolle `Supporter`, Sprachkanäle `support-warteraum` und `support-team` sowie Textkanal `support-benachrichtigungen`. Betritt ein Mitglied den Warteraum, wird das Team automatisch benachrichtigt. Ist bereits ein Supporter in einem Sprachkanal, wird das Mitglied direkt dorthin verschoben; andernfalls bleibt es im Warteraum und wird automatisch verbunden, sobald ein Supporter einen Sprachkanal betritt.\n- Support-Sprachkanal mit automatisch erzeugtem kurzem Signalton; Bot benötigt Kanal ansehen, verbinden und sprechen
 - Whitelist-Anträge mit Formular, Annahme/Ablehnung, Discord-Nickname auf Minecraft-Namen und Rolle `Mitglied`
 - Interner Whitelist-Prüfkanal sowie Team-Rangstufen bis Senior Administrator
 
