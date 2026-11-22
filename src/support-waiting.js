@@ -1,140 +1,139 @@
-const {
-  ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder,
-  PermissionFlagsBits, MessageFlags
-} = require("discord.js");
-
-const WAITING_CHANNEL_ID = () => process.env.SUPPORT_WAITING_CHANNEL_ID;
-const NOTIFY_CHANNEL_ID = () => process.env.SUPPORT_NOTIFY_CHANNEL_ID;
-const SUPPORT_ROLE_ID = () => process.env.SUPPORT_ROLE_ID;
+const { ChannelType, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const notifiedMembers = new Set();
 
 function isWaitingChannel(channel) {
-  if (!channel?.isVoiceBased()) return false;
-  const configured = WAITING_CHANNEL_ID();
-  if (configured) return channel.id === configured;
-  return /support[-_ ]?(warte)?raum|warte[-_ ]?raum/i.test(channel.name);
+  return Boolean(channel?.isVoiceBased() && /support[-_ ]?(warte)?raum|warte[-_ ]?raum/i.test(channel.name));
 }
-
 function isSupporter(member) {
-  if (!member) return false;
+  if (!member || member.user.bot) return false;
   if (member.permissions.has(PermissionFlagsBits.Administrator) ||
       member.permissions.has(PermissionFlagsBits.MoveMembers)) return true;
-  const roleId = SUPPORT_ROLE_ID();
-  if (roleId && member.roles.cache.has(roleId)) return true;
-  return member.roles.cache.some(role =>
-    /support|moderator|administrator|management|owner/i.test(role.name)
-  );
+  return member.roles.cache.some(role => /support|moderator|administrator|management|owner/i.test(role.name));
 }
 
-async function findNotifyChannel(guild) {
-  const configured = NOTIFY_CHANNEL_ID();
-  if (configured) {
-    const channel = await guild.channels.fetch(configured).catch(() => null);
-    return channel?.isTextBased() ? channel : null;
-  }
+async function ensureSupportInfrastructure(guild) {
   await guild.channels.fetch();
-  return guild.channels.cache.find(channel =>
-    channel.isTextBased() && !channel.isThread() &&
-    /support|team-chat|team-chat|moderation/i.test(channel.name)
-  ) || null;
+  await guild.roles.fetch();
+  let supportRole = guild.roles.cache.find(role => /^supporter$/i.test(role.name));
+  if (!supportRole) supportRole = await guild.roles.create({
+    name: "Supporter", color: 0x1ABC9C, hoist: true, mentionable: true,
+    reason: "Automatische Support-Einrichtung durch Discord Server Builder"
+  });
+
+  let category = guild.channels.cache.find(channel =>
+    channel.type === ChannelType.GuildCategory && /support/i.test(channel.name)
+  );
+  if (!category) category = await guild.channels.create({
+    name: "🎫 SUPPORT", type: ChannelType.GuildCategory,
+    reason: "Automatische Support-Einrichtung durch Discord Server Builder"
+  });
+
+  const everyone = guild.roles.everyone;
+  const botId = (await guild.members.fetchMe()).id;
+  const reason = "Automatische Support-Einrichtung durch Discord Server Builder";
+  const createOrGet = async (name, type, permissionOverwrites) => {
+    let channel = guild.channels.cache.find(item =>
+      item.parentId === category.id && item.name === name && item.type === type
+    );
+    if (!channel) channel = await guild.channels.create({
+      name, type, parent: category.id, permissionOverwrites, reason
+    });
+    return channel;
+  };
+
+  await createOrGet("support-warteraum", ChannelType.GuildVoice, [
+    { id: everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] },
+    { id: botId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.MoveMembers] }
+  ]);
+  await createOrGet("support-team", ChannelType.GuildVoice, [
+    { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] },
+    { id: supportRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] },
+    { id: botId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.MoveMembers] }
+  ]);
+  await createOrGet("support-benachrichtigungen", ChannelType.GuildText, [
+    { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: supportRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    { id: botId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.EmbedLinks] }
+  ]);
+  console.log("[SUPPORT-SETUP] Support-System eingerichtet:", guild.name);
+}
+
+async function notifySupport(guild, member, waitingChannel) {
+  const role = guild.roles.cache.find(item => /^supporter$/i.test(item.name));
+  const notify = guild.channels.cache.find(item =>
+    item.type === ChannelType.GuildText && item.name === "support-benachrichtigungen"
+  );
+  if (!notify) return;
+  const embed = new EmbedBuilder().setColor(0x1ABC9C)
+    .setTitle("🔔 Neues Mitglied wartet auf Support")
+    .setDescription(member.toString() + " wartet im " + waitingChannel.toString() + ".")
+    .addFields(
+      { name: "Mitglied", value: member.user.tag, inline: true },
+      { name: "Wartezeit", value: "<t:" + Math.floor(Date.now() / 1000) + ":R>", inline: true }
+    ).setTimestamp();
+  await notify.send({
+    content: role ? role.toString() + " – bitte Support übernehmen." : "Support-Team – bitte Support übernehmen.",
+    embeds: [embed], allowedMentions: { roles: role ? [role.id] : [], users: [] }
+  }).catch(error => console.warn("[SUPPORT] Benachrichtigung fehlgeschlagen:", error.message));
+}
+
+async function moveWaitingMember(guild, targetChannel) {
+  if (!targetChannel?.isVoiceBased()) return false;
+  await guild.channels.fetch();
+  const waiting = guild.channels.cache.find(isWaitingChannel);
+  if (!waiting) return false;
+  const member = [...waiting.members.values()].find(item => !item.user.bot);
+  if (!member) return false;
+  const botMember = await guild.members.fetchMe();
+  if (!botMember.permissions.has(PermissionFlagsBits.Administrator) &&
+      !botMember.permissions.has(PermissionFlagsBits.MoveMembers)) {
+    console.warn("[SUPPORT] Bot fehlt die Berechtigung Mitglieder verschieben.");
+    return false;
+  }
+  try {
+    await member.voice.setChannel(targetChannel, "Automatische Support-Zuweisung");
+    const notify = guild.channels.cache.find(item =>
+      item.type === ChannelType.GuildText && item.name === "support-benachrichtigungen"
+    );
+    if (notify) await notify.send("✅ " + member.toString() + " wurde automatisch zu " + targetChannel.toString() + " weitergeleitet.");
+    notifiedMembers.delete(guild.id + ":" + member.id);
+    return true;
+  } catch (error) {
+    console.warn("[SUPPORT] Automatische Weiterleitung fehlgeschlagen:", error.message);
+    return false;
+  }
 }
 
 async function handleSupportVoiceStateUpdate(oldState, newState) {
   try {
     const member = newState.member || oldState.member;
-    if (!member) return;
-    const key = member.guild.id + ":" + member.id;
-    if (oldState.channelId && isWaitingChannel(oldState.channel) && oldState.channelId !== newState.channelId) {
-      notifiedMembers.delete(key);
+    if (!member || member.user.bot) return;
+    if (oldState.channel && isWaitingChannel(oldState.channel) && oldState.channelId !== newState.channelId) {
+      notifiedMembers.delete(member.guild.id + ":" + member.id);
     }
-    if (oldState.channelId === newState.channelId || !newState.channelId) return;
-    const waitingChannel = newState.channel;
-    if (member.user.bot || !isWaitingChannel(waitingChannel)) return;
-    if (notifiedMembers.has(key)) return;
 
-    const notifyChannel = await findNotifyChannel(member.guild);
-    if (!notifyChannel) {
-      console.warn("[SUPPORT-WAITING] Kein Benachrichtigungskanal gefunden. SUPPORT_NOTIFY_CHANNEL_ID setzen.");
-      return;
+    // Supporter kommt in einen Sprachkanal: ältesten Wartenden automatisch verbinden.
+    if (newState.channelId && newState.channelId !== oldState.channelId &&
+        !isWaitingChannel(newState.channel) && isSupporter(member)) {
+      await moveWaitingMember(member.guild, newState.channel);
     }
-    notifiedMembers.add(key);
-    const roleId = SUPPORT_ROLE_ID();
-    const role = roleId ? member.guild.roles.cache.get(roleId) : member.guild.roles.cache.find(item =>
-      /support|moderator|administrator|management|owner/i.test(item.name)
-    );
-    const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setTitle("🔔 Neues Mitglied im Support-Warteraum")
-      .setDescription(member.toString() + " wartet auf Unterstützung.")
-      .addFields(
-        { name: "Mitglied", value: member.user.tag, inline: true },
-        { name: "Warteraum", value: waitingChannel.toString(), inline: true },
-        { name: "Seit", value: "<t:" + Math.floor(Date.now() / 1000) + ":R>", inline: true }
-      )
-      .setFooter({ text: "Ein Supporter kann das Mitglied mit dem Button abholen." })
-      .setTimestamp();
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("support_pickup:" + member.id)
-        .setLabel("Mitglied abholen")
-        .setEmoji("🎧")
-        .setStyle(ButtonStyle.Primary)
-    );
-    await notifyChannel.send({
-      content: role ? role.toString() + " – bitte Support übernehmen." : "🔔 Support-Team – bitte Support übernehmen.",
-      embeds: [embed],
-      components: [row],
-      allowedMentions: { roles: role ? [role.id] : [], users: [] }
-    });
+
+    // Mitglied kommt in den Warteraum: Supporter suchen und bei Verfügbarkeit direkt verbinden.
+    if (newState.channelId && newState.channelId !== oldState.channelId && isWaitingChannel(newState.channel)) {
+      const key = member.guild.id + ":" + member.id;
+      if (notifiedMembers.has(key)) return;
+      notifiedMembers.add(key);
+      await notifySupport(member.guild, member, newState.channel);
+      const channels = await member.guild.channels.fetch();
+      const activeChannel = channels.find(channel =>
+        channel?.isVoiceBased() && !isWaitingChannel(channel) &&
+        channel.members?.some(isSupporter)
+      );
+      if (activeChannel) await moveWaitingMember(member.guild, activeChannel);
+    }
   } catch (error) {
-    console.error("[SUPPORT-WAITING] Benachrichtigung fehlgeschlagen:", error);
+    console.error("[SUPPORT] Voice-Automatik fehlgeschlagen:", error);
   }
 }
 
-async function handleSupportWaitingInteraction(interaction) {
-  if (!interaction.isButton() || !interaction.customId.startsWith("support_pickup:")) return false;
-  const memberId = interaction.customId.split(":")[1];
-  const guild = interaction.guild;
-  if (!guild) {
-    await interaction.reply({ content: "Dieser Button funktioniert nur auf dem Server.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
-
-  const supporter = await guild.members.fetch(interaction.user.id).catch(() => null);
-  if (!isSupporter(supporter)) {
-    await interaction.reply({ content: "Nur das Support-Team darf Mitglieder abholen.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
-  if (!supporter.voice.channel || isWaitingChannel(supporter.voice.channel)) {
-    await interaction.reply({ content: "Bitte betrete zuerst deinen Support-Sprachkanal. Danach kannst du das Mitglied hier abholen.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
-
-  const waitingMember = await guild.members.fetch(memberId).catch(() => null);
-  if (!waitingMember?.voice.channel || !isWaitingChannel(waitingMember.voice.channel)) {
-    await interaction.reply({ content: "Das Mitglied ist nicht mehr im Support-Warteraum.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
-  const botMember = await guild.members.fetchMe();
-  if (!botMember.permissions.has(PermissionFlagsBits.MoveMembers)) {
-    await interaction.reply({ content: "Mir fehlt die Discord-Berechtigung „Mitglieder verschieben“.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
-
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  try {
-    await waitingMember.voice.setChannel(supporter.voice.channel, "Support-Abholung durch " + interaction.user.tag);
-    await interaction.message.edit({
-      content: "✅ " + waitingMember.toString() + " wird von " + interaction.user.toString() + " betreut.",
-      embeds: interaction.message.embeds,
-      components: []
-    });
-    await interaction.editReply("✅ " + waitingMember.user.tag + " wurde in deinen Sprachkanal geholt.");
-  } catch (error) {
-    console.error("[SUPPORT-WAITING] Abholung fehlgeschlagen:", error);
-    await interaction.editReply("Abholung fehlgeschlagen. Prüfe, ob der Bot „Mitglieder verschieben“ darf und Zugriff auf beide Sprachkanäle hat.");
-  }
-  return true;
-}
-
-module.exports = { handleSupportVoiceStateUpdate, handleSupportWaitingInteraction };
+module.exports = { handleSupportVoiceStateUpdate, ensureSupportInfrastructure };
