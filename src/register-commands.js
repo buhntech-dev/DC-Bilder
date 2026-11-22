@@ -34,6 +34,7 @@ const commands = [
         .setMaxLength(4000)
     ),
 
+  new SlashCommandBuilder().setName("abbrechen").setDescription("Stoppt alle laufenden und wartenden Bot-Serveraufbauten (nur Bot-Owner)"),
   new SlashCommandBuilder().setName("backup").setDescription("Erstellt sofort ein Backup der Discord-Struktur"),
   new SlashCommandBuilder().setName("backup-wiederherstellen").setDescription("Stellt fehlende Rollen und Kanäle aus einem Backup wieder her")
     .addStringOption(o => o.setName("backup_id").setDescription("Nachrichten-ID des Backups aus #backup-archiv").setRequired(true)),
