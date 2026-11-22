@@ -6,10 +6,20 @@ function buildRolePositions(createdRoleList) {
 }
 
 const activeBuildGuilds = new Map();
+let buildCancellationVersion = 0;
 
 // Ein Neustart beendet den bisherigen Node-Prozess und damit alle laufenden Builds.
 // Diese Funktion entfernt zusätzlich verwaiste In-Process-Sperren beim Bot-Start.
 function resetActiveBuilds() {
+  const count = activeBuildGuilds.size;
+  buildCancellationVersion++;
+  for (const build of activeBuildGuilds.values()) build.controller.abort();
+  return count;
+}
+
+// Bricht alle laufenden Builds ab und invalidiert auch Builds, die noch warten.
+function cancelActiveBuilds() {
+  buildCancellationVersion++;
   const count = activeBuildGuilds.size;
   for (const build of activeBuildGuilds.values()) build.controller.abort();
   return count;
@@ -88,14 +98,26 @@ function validateServerPlan(plan) {
 
 async function applyServerPlan(guild, plan, options = {}) {
   validateServerPlan(plan);
+  const cancellationVersionAtStart = buildCancellationVersion;
+  const throwIfGloballyCancelled = () => {
+    if (cancellationVersionAtStart !== buildCancellationVersion) {
+      const error = new Error("Der Serveraufbau wurde durch /abbrechen gestoppt. Bereits ausgeführte Discord-Änderungen bleiben bestehen.");
+      error.code = "BUILD_ABORTED";
+      throw error;
+    }
+  };
+  throwIfGloballyCancelled();
   // Mehrere bestätigte Befehle dürfen nacheinander ausgeführt werden.
   // Einen laufenden Aufbau niemals durch den nächsten Befehl abbrechen:
   // der nächste wartet, bis der vorherige vollständig beendet ist.
   while (activeBuildGuilds.has(guild.id)) {
+    throwIfGloballyCancelled();
     const previousBuild = activeBuildGuilds.get(guild.id);
     console.log("[SERVER-BUILD] Weiterer bestätigter Aufbau wartet auf den laufenden Aufbau:", guild.id);
     await previousBuild.done;
+    throwIfGloballyCancelled();
   }
+  throwIfGloballyCancelled();
   const controller = new AbortController();
   const buildSignal = controller.signal;
   let finishBuild;
@@ -557,4 +579,4 @@ function buildChannelOverwrites(guild, names, roleMap, ownerId, botId) {
   return overwrites;
 }
 
-module.exports = { applyServerPlan, resetActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions };
+module.exports = { applyServerPlan, resetActiveBuilds, cancelActiveBuilds, validateServerPlan, rolePermissions, buildChannelOverwrites, buildRolePositions };
