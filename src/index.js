@@ -9,7 +9,7 @@ const { createRobloxFeuerwehrPreset } = require("./roblox-feuerwehr-preset");
 const { buildWebsiteHtml } = require("./website");
 const { applyServerPlan, resetActiveBuilds } = require("./discord-builder");
 const { joinSupportVoice } = require("./support-voice");
-const { handleSupportVoiceStateUpdate, handleSupportWaitingInteraction } = require("./support-waiting");
+const { handleSupportVoiceStateUpdate, ensureSupportInfrastructure } = require("./support-waiting");
 const { handleApplicationInteraction, panelRow } = require("./applications");
 const { startMinecraftStatusUpdates, updateGuildMinecraftStatus, statusEmbed, DEFAULT_ADDRESS } = require("./minecraft-status");
 const { createPromotionRequest, handlePromotionInteraction } = require("./team-promotions");
@@ -190,6 +190,8 @@ client.once("clientReady", async () => {
         }
       }
     } catch (error) { console.warn(`Bot-Rolle konnte auf ${guild.name} nicht vollständig vergeben werden:`, error.message); }
+    try { await ensureSupportInfrastructure(guild); }
+    catch (error) { console.warn(`[SUPPORT-SETUP] Support-Struktur auf ${guild.name} konnte nicht erstellt werden:`, error.message); }
     try { await joinSupportVoice(client, guild); }
     catch (error) { console.warn(`Support-Voice konnte auf ${guild.name} nicht gestartet werden:`, error.message); }
   }
@@ -803,6 +805,7 @@ client.on("interactionCreate", async interaction => {
           else void interaction.editReply({ content: String(message).slice(0, 1900) }).catch(() => {});
         }
       });
+      await ensureSupportInfrastructure(interaction.guild);
       let renamedGuild = false;
       if (entry.renameGuild) {
         try {
