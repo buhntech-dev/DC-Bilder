@@ -214,7 +214,7 @@ client.on("guildMemberAdd", async member => {
   catch (error) { console.warn("[WELCOME] Begrüßung fehlgeschlagen:", error.message); }
 });
 
-client.on("interactionCreate", async interaction => {
+client.on("voiceStateUpdate", async (oldState, newState) => {\n  await handleSupportVoiceStateUpdate(oldState, newState);\n});\n\nclient.on("interactionCreate", async interaction => {
   try {
   // Slash-Befehle VOR jeder weiteren Verarbeitung bestätigen.
   // Discord verwirft Interaktionen nach ca. 3 Sekunden mit Fehler 10062.
