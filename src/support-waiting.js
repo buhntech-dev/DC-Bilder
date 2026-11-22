@@ -41,19 +41,23 @@ async function findNotifyChannel(guild) {
 
 async function handleSupportVoiceStateUpdate(oldState, newState) {
   try {
-    if (oldState.channelId === newState.channelId || !newState.channelId) return;
-    const member = newState.member;
-    const waitingChannel = newState.channel;
-    if (!member || member.user.bot || !isWaitingChannel(waitingChannel)) return;
+    const member = newState.member || oldState.member;
+    if (!member) return;
     const key = member.guild.id + ":" + member.id;
+    if (oldState.channelId && isWaitingChannel(oldState.channel) && oldState.channelId !== newState.channelId) {
+      notifiedMembers.delete(key);
+    }
+    if (oldState.channelId === newState.channelId || !newState.channelId) return;
+    const waitingChannel = newState.channel;
+    if (member.user.bot || !isWaitingChannel(waitingChannel)) return;
     if (notifiedMembers.has(key)) return;
-    notifiedMembers.add(key);
 
     const notifyChannel = await findNotifyChannel(member.guild);
     if (!notifyChannel) {
       console.warn("[SUPPORT-WAITING] Kein Benachrichtigungskanal gefunden. SUPPORT_NOTIFY_CHANNEL_ID setzen.");
       return;
     }
+    notifiedMembers.add(key);
     const roleId = SUPPORT_ROLE_ID();
     const role = roleId ? member.guild.roles.cache.get(roleId) : member.guild.roles.cache.find(item =>
       /support|moderator|administrator|management|owner/i.test(item.name)
