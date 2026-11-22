@@ -214,7 +214,11 @@ client.on("guildMemberAdd", async member => {
   catch (error) { console.warn("[WELCOME] Begrüßung fehlgeschlagen:", error.message); }
 });
 
-client.on("voiceStateUpdate", async (oldState, newState) => {\n  await handleSupportVoiceStateUpdate(oldState, newState);\n});\n\nclient.on("interactionCreate", async interaction => {
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  await handleSupportVoiceStateUpdate(oldState, newState);
+});
+
+client.on("interactionCreate", async interaction => {
   try {
   // Slash-Befehle VOR jeder weiteren Verarbeitung bestätigen.
   // Discord verwirft Interaktionen nach ca. 3 Sekunden mit Fehler 10062.
@@ -222,7 +226,8 @@ client.on("voiceStateUpdate", async (oldState, newState) => {\n  await handleSup
       !interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   }
-  if (await handleSupportWaitingInteraction(interaction)) return;\n  if (await handleApplicationInteraction(interaction)) return;
+  if (await handleSupportWaitingInteraction(interaction)) return;
+  if (await handleApplicationInteraction(interaction)) return;
   if (await handlePromotionInteraction(interaction)) return;
 
   if (interaction.isButton() && interaction.customId.startsWith("serverwipe_")) {
